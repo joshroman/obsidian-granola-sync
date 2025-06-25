@@ -21,6 +21,7 @@ export default class GranolaSyncPlugin extends Plugin {
   lastError: string = '';
   private syncInterval: number | null = null;
   private eventRefs: EventRef[] = [];
+  private statusBarItem: HTMLElement | null = null;
   
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
@@ -84,6 +85,10 @@ export default class GranolaSyncPlugin extends Plugin {
       await this.performSync();
     });
     
+    // Add status bar item
+    this.statusBarItem = this.addStatusBarItem();
+    this.updateStatusBar();
+    
     // Show setup wizard if no API key
     if (!this.settings.apiKey) {
       this.showSetupWizard();
@@ -113,6 +118,11 @@ export default class GranolaSyncPlugin extends Plugin {
     
     // Unregister all events
     this.eventRefs.forEach(ref => this.app.workspace.offref(ref));
+    
+    // Remove status bar item
+    if (this.statusBarItem) {
+      this.statusBarItem.remove();
+    }
     
     this.logger.info('Granola Sync plugin unloaded');
   }
@@ -151,6 +161,7 @@ export default class GranolaSyncPlugin extends Plugin {
     modal.open();
     
     try {
+      this.updateStatusBar('syncing');
       const result = await this.syncEngine.sync();
       
       if (result.success) {
@@ -160,9 +171,11 @@ export default class GranolaSyncPlugin extends Plugin {
       }
       
       modal.showComplete(result);
+      this.updateStatusBar();
     } catch (error) {
       this.errorHandler.showError(error, 'Sync operation');
       modal.showError(error instanceof Error ? error.message : 'Unknown error');
+      this.updateStatusBar('error');
     }
   }
   
@@ -242,5 +255,33 @@ export default class GranolaSyncPlugin extends Plugin {
       this.syncInterval = null;
       this.logger.info('Automatic sync disabled');
     }
+  }
+  
+  private updateStatusBar(status?: 'syncing' | 'error') {
+    if (!this.statusBarItem) return;
+    
+    const stats = this.stateManager?.getStats();
+    
+    if (status === 'syncing') {
+      this.statusBarItem.setText('🔄 Syncing...');
+      this.statusBarItem.addClass('mod-clickable');
+    } else if (status === 'error') {
+      this.statusBarItem.setText('⚠️ Sync error');
+      this.statusBarItem.addClass('mod-clickable');
+    } else if (stats) {
+      const lastSync = this.settings.lastSync 
+        ? new Date(this.settings.lastSync).toLocaleTimeString()
+        : 'Never';
+      this.statusBarItem.setText(`📅 ${stats.totalFiles} meetings | Last: ${lastSync}`);
+      this.statusBarItem.addClass('mod-clickable');
+    } else {
+      this.statusBarItem.setText('📅 Granola Sync');
+      this.statusBarItem.addClass('mod-clickable');
+    }
+    
+    // Make clickable
+    this.statusBarItem.onClickEvent((evt) => {
+      this.performSync();
+    });
   }
 }

@@ -208,11 +208,13 @@ export class SettingsTab extends PluginSettingTab {
       });
     }
     
-    const stats = this.plugin.stateManager.getStats();
-    statusEl.createEl('div', {
-      text: `Tracked files: ${stats.totalFiles} | Deleted: ${stats.deletedFiles}`,
-      cls: 'setting-item-description'
-    });
+    if (this.plugin.stateManager) {
+      const stats = this.plugin.stateManager.getStats();
+      statusEl.createEl('div', {
+        text: `Tracked files: ${stats.totalFiles} | Deleted: ${stats.deletedFiles}`,
+        cls: 'setting-item-description'
+      });
+    }
 
     // Manual sync button
     new Setting(containerEl)

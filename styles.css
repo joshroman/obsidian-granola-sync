@@ -92,3 +92,69 @@
   border-radius: 4px;
   margin: 8px 0;
 }
+
+.setting-item code {
+  font-family: var(--font-monospace);
+  background-color: var(--background-secondary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+/* Status Bar */
+.status-bar-item.mod-clickable {
+  cursor: pointer;
+}
+
+.status-bar-item.mod-clickable:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+/* Enhanced Progress Modal */
+.sync-progress-container .progress-bar-container {
+  background-color: var(--background-modifier-border);
+  border-radius: 4px;
+  overflow: hidden;
+  height: 8px;
+}
+
+.sync-status {
+  text-align: center;
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.sync-details {
+  background-color: var(--background-secondary);
+  padding: 12px;
+  border-radius: 6px;
+}
+
+/* Enhanced Error Display */
+.sync-error-list {
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: var(--background-secondary);
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.sync-error-item {
+  border-left: 3px solid var(--text-error);
+  background-color: var(--background-primary);
+}
+
+/* Wizard Enhancements */
+.wizard-step-content {
+  min-height: 200px;
+}
+
+.wizard-step-content ul {
+  margin-left: 20px;
+}
+
+.wizard-step-content p {
+  margin: 12px 0;
+  line-height: 1.5;
+}
