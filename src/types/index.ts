@@ -34,6 +34,12 @@ export interface SyncError {
   meetingTitle: string;
   error: string;
   timestamp: Date;
+  details?: {
+    type: string;
+    message: string;
+    code?: string | number;
+    stack?: string;
+  };
 }
 
 export interface SyncProgress {

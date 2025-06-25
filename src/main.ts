@@ -9,6 +9,7 @@ import { SyncProgressModal } from './ui/sync-modal';
 import { SetupWizard } from './ui/wizard-modal';
 import { InputValidator } from './utils/input-validator';
 import { Logger } from './utils/logger';
+import { ErrorHandler } from './utils/error-handler';
 
 export default class GranolaSyncPlugin extends Plugin {
   settings!: PluginSettings;
@@ -16,6 +17,7 @@ export default class GranolaSyncPlugin extends Plugin {
   syncEngine!: SyncEngine;
   granolaService!: GranolaService;
   logger!: Logger;
+  errorHandler!: ErrorHandler;
   lastError: string = '';
   private syncInterval: number | null = null;
   private eventRefs: EventRef[] = [];
@@ -27,8 +29,9 @@ export default class GranolaSyncPlugin extends Plugin {
   async onload() {
     console.log('Loading Granola Sync plugin');
     
-    // Initialize logger
+    // Initialize logger and error handler
     this.logger = new Logger(this);
+    this.errorHandler = new ErrorHandler(this.logger);
     
     // Load settings
     await this.loadSettings();
@@ -158,7 +161,7 @@ export default class GranolaSyncPlugin extends Plugin {
       
       modal.showComplete(result);
     } catch (error) {
-      this.logger.error('Sync failed', error);
+      this.errorHandler.showError(error, 'Sync operation');
       modal.showError(error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -178,8 +181,7 @@ export default class GranolaSyncPlugin extends Plugin {
       }
       return isValid;
     } catch (error) {
-      this.logger.error('Connection test failed', error);
-      new Notice('❌ Connection error: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      this.errorHandler.showError(error, 'Connection test');
       return false;
     }
   }
@@ -203,18 +205,8 @@ export default class GranolaSyncPlugin extends Plugin {
         return false;
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      if (errorMessage.includes('401')) {
-        this.lastError = 'Authentication failed';
-      } else if (errorMessage.includes('429')) {
-        this.lastError = 'Rate limited. Please try again later.';
-      } else if (errorMessage.includes('Network')) {
-        this.lastError = 'Connection failed. Check your internet.';
-      } else if (errorMessage.includes('500')) {
-        this.lastError = 'Server error. Please try again later.';
-      } else {
-        this.lastError = errorMessage;
-      }
+      const errorInfo = this.errorHandler.handleError(error, 'API key validation');
+      this.lastError = errorInfo.error;
       return false;
     }
   }
