@@ -1,6 +1,7 @@
 import { App, Plugin, PluginManifest, Notice, EventRef } from 'obsidian';
 import { SyncStateManager } from './services/sync-state-manager';
 import { SyncEngine } from './services/sync-engine';
+import { OptimizedSyncEngine } from './services/optimized-sync-engine';
 import { GranolaService } from './services/granola-service';
 import { PathGenerator } from './utils/path-generator';
 import { DEFAULT_SETTINGS, PluginSettings } from './types';
