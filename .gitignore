@@ -1,0 +1,23 @@
+# Node modules
+node_modules/
+
+# Build output (main.js is generated from main.ts)
+main.js
+
+# npm debug logs
+npm-debug.log*
+
+# macOS
+.DS_Store
+
+# Editor directories and files
+.idea
+.vscode
+*.swp
+*.swo
+
+# Obsidian workspace files
+.obsidian/workspace*
+
+# Test vault (if included in project)
+ObsidianTestVault/
