@@ -3,7 +3,7 @@ import { Meeting, Attachment } from '../types';
 export class InputValidator {
   private static readonly MAX_PATH_LENGTH = 255;
   private static readonly MAX_TITLE_LENGTH = 200;
-  private static readonly INVALID_PATH_CHARS = /[<>:"|?*]/g;
+  private static readonly INVALID_PATH_CHARS = /[<>:"|?*\\]/g;
   private static readonly WINDOWS_RESERVED = /^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])$/i;
   
   /**
