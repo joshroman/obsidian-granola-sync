@@ -1,23 +1,29 @@
-# Node modules
+# Dependencies
 node_modules/
 
-# Build output (main.js is generated from main.ts)
+# Build output
 main.js
+*.js.map
 
-# npm debug logs
-npm-debug.log*
-
-# macOS
-.DS_Store
-
-# Editor directories and files
-.idea
-.vscode
+# IDE files
+.idea/
+.vscode/
 *.swp
 *.swo
+.DS_Store
 
-# Obsidian workspace files
-.obsidian/workspace*
+# Logs
+*.log
+npm-debug.log*
 
-# Test vault (if included in project)
-ObsidianTestVault/
+# Test coverage
+coverage/
+.nyc_output/
+
+# Environment files
+.env
+.env.local
+
+# Obsidian test vault (if used for development)
+test-vault/.obsidian/workspace.json
+test-vault/.obsidian/workspace-mobile.json
