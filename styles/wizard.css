@@ -1,0 +1,220 @@
+.granola-setup-wizard {
+  min-width: 600px;
+  max-width: 800px;
+}
+
+.wizard-header {
+  margin-bottom: 30px;
+}
+
+.wizard-header h2 {
+  margin: 0 0 20px 0;
+  font-size: 1.5em;
+  font-weight: 600;
+}
+
+/* Progress Bar */
+.wizard-progress {
+  margin-bottom: 20px;
+}
+
+.progress-bar {
+  height: 6px;
+  background-color: var(--background-modifier-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--interactive-accent);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  margin-top: 8px;
+  font-size: 0.85em;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Content */
+.wizard-content {
+  min-height: 300px;
+  margin-bottom: 30px;
+}
+
+.wizard-description {
+  margin-bottom: 20px;
+  line-height: 1.6;
+  color: var(--text-normal);
+}
+
+/* Footer */
+.wizard-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.wizard-footer .spacer {
+  flex-grow: 1;
+}
+
+/* Welcome Step Features */
+.wizard-features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 15px;
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+}
+
+.feature-icon {
+  font-size: 1.5em;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.feature-text h4 {
+  margin: 0 0 5px 0;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.feature-text p {
+  margin: 0;
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+/* API Key Step */
+.api-key-container {
+  margin-top: 20px;
+}
+
+.connection-status {
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 0.9em;
+}
+
+.status-testing {
+  color: var(--text-muted);
+}
+
+.status-success {
+  color: var(--text-success);
+  background-color: var(--background-success);
+  padding: 8px 12px;
+  border-radius: 5px;
+  display: inline-block;
+}
+
+.status-error {
+  color: var(--text-error);
+  background-color: var(--background-error);
+  padding: 8px 12px;
+  border-radius: 5px;
+  display: inline-block;
+}
+
+/* Folder Preview */
+.folder-preview,
+.organization-preview,
+.naming-preview {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+}
+
+.folder-preview h4,
+.organization-preview h4,
+.naming-preview h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.folder-tree {
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+  line-height: 1.8;
+}
+
+.tree-root {
+  font-weight: 600;
+}
+
+.tree-folder {
+  color: var(--text-accent);
+}
+
+.tree-file {
+  color: var(--text-normal);
+}
+
+/* File Naming Preview */
+.filename-examples {
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+  line-height: 1.8;
+}
+
+.filename-example {
+  padding: 2px 0;
+}
+
+/* Setup Summary */
+.setup-summary {
+  background-color: var(--background-secondary);
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.setup-summary h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.2em;
+}
+
+.setup-summary ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.setup-summary li {
+  margin: 8px 0;
+  color: var(--text-success);
+}
+
+.setup-complete-text {
+  text-align: center;
+  font-size: 1.1em;
+  margin-top: 20px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .wizard-features {
+    grid-template-columns: 1fr;
+  }
+  
+  .granola-setup-wizard {
+    min-width: auto;
+    max-width: 100%;
+  }
+}
