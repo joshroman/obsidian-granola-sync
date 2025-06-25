@@ -8,8 +8,9 @@ export interface TestEnvironment {
   workspace: any;
 }
 
-export function createTestEnvironment(): TestEnvironment {
-  const mockWorkspace = {
+// Factory function to create fresh mocks for each test
+function createMockWorkspace() {
+  return {
     activeLeaf: null,
     on: jest.fn(),
     off: jest.fn(),
@@ -21,8 +22,11 @@ export function createTestEnvironment(): TestEnvironment {
     requestSaveLayout: jest.fn(),
     offref: jest.fn()
   };
+}
 
-  const mockVault = {
+// Factory function to create fresh vault mocks for each test
+function createMockVault() {
+  return {
     getFiles: jest.fn().mockReturnValue([]),
     getMarkdownFiles: jest.fn().mockReturnValue([]),
     getAbstractFileByPath: jest.fn(),
@@ -41,6 +45,11 @@ export function createTestEnvironment(): TestEnvironment {
       }
     }
   };
+}
+
+export function createTestEnvironment(): TestEnvironment {
+  const mockWorkspace = createMockWorkspace();
+  const mockVault = createMockVault();
 
   const mockApp = {
     workspace: mockWorkspace,
@@ -77,26 +86,56 @@ export function createTestEnvironment(): TestEnvironment {
   };
 }
 
-// Extend GranolaSyncPlugin with test methods
-export function setupPluginMocks(plugin: GranolaSyncPlugin, initialData: any = {}) {
-  // Mock plugin data methods
-  (plugin as any).loadData = jest.fn().mockImplementation(async () => {
-    // Return both plugin settings and state manager data
-    return { ...initialData };
+// Enhanced cleanup function to reset all mock states
+export function cleanupTestEnvironment(env: TestEnvironment) {
+  // Clear all jest mock call histories and implementations
+  Object.values(env.vault).forEach(mock => {
+    if (jest.isMockFunction(mock)) {
+      mock.mockClear();
+    }
   });
-  (plugin as any).saveData = jest.fn().mockResolvedValue(undefined);
   
-  // Mock plugin UI methods
-  (plugin as any).addCommand = jest.fn();
-  (plugin as any).addRibbonIcon = jest.fn();
-  (plugin as any).addStatusBarItem = jest.fn().mockReturnValue({
-    setText: jest.fn(),
-    addClass: jest.fn(),
-    removeClass: jest.fn(),
-    remove: jest.fn(),
-    onClickEvent: jest.fn()
+  Object.values(env.workspace).forEach(mock => {
+    if (jest.isMockFunction(mock)) {
+      mock.mockClear();
+    }
   });
-  (plugin as any).addSettingTab = jest.fn();
-  (plugin as any).registerEvent = jest.fn().mockReturnValue({ e: jest.fn() });
-  (plugin as any).registerInterval = jest.fn();
+
+  // Reset vault return values to defaults
+  env.vault.getFiles.mockReturnValue([]);
+  env.vault.getMarkdownFiles.mockReturnValue([]);
+  env.vault.getAbstractFileByPath.mockReturnValue(null);
+}
+
+// Factory function for plugin mocks - creates fresh mocks each time
+function createPluginMocks(initialData: any = {}) {
+  return {
+    loadData: jest.fn().mockImplementation(async () => ({ ...initialData })),
+    saveData: jest.fn().mockResolvedValue(undefined),
+    addCommand: jest.fn(),
+    addRibbonIcon: jest.fn(),
+    addStatusBarItem: jest.fn().mockReturnValue({
+      setText: jest.fn(),
+      addClass: jest.fn(),
+      removeClass: jest.fn(),
+      remove: jest.fn(),
+      onClickEvent: jest.fn()
+    }),
+    addSettingTab: jest.fn(),
+    registerEvent: jest.fn().mockReturnValue({ e: jest.fn() }),
+    registerInterval: jest.fn()
+  };
+}
+
+// Enhanced plugin mock setup with complete isolation
+export function setupPluginMocks(plugin: GranolaSyncPlugin, initialData: any = {}) {
+  const freshMocks = createPluginMocks(initialData);
+  
+  // Apply all mocks to the plugin instance
+  Object.entries(freshMocks).forEach(([key, mock]) => {
+    (plugin as any)[key] = mock;
+  });
+  
+  // Return the mocks for direct access in tests if needed
+  return freshMocks;
 }

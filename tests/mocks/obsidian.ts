@@ -90,26 +90,80 @@ export class App {
 
 export class Modal {
   app: App;
-  contentEl: HTMLElement;
+  contentEl: any; // DocumentFragment in Obsidian
   titleEl: HTMLElement;
   
   constructor(app: App) {
     this.app = app;
-    this.contentEl = document.createElement('div');
+    // Create a DocumentFragment-like object with Obsidian methods
+    this.contentEl = this.createDocumentFragmentWithMethods();
     this.titleEl = document.createElement('div');
     
     // Add Obsidian-specific methods to DOM elements
-    this.addObsidianMethods(this.contentEl);
     this.addObsidianMethods(this.titleEl);
   }
   
-  private addObsidianMethods(el: HTMLElement) {
+  private createDocumentFragmentWithMethods() {
+    const fragment = document.createDocumentFragment();
+    this.addObsidianMethods(fragment as any);
+    return fragment;
+  }
+  
+  private addObsidianMethods(el: HTMLElement | DocumentFragment) {
     (el as any).empty = () => {
       while (el.firstChild) {
         el.removeChild(el.firstChild);
       }
     };
     
+    // Add Obsidian-specific text methods
+    (el as any).setText = (text: string) => {
+      el.textContent = text;
+      return el;
+    };
+    
+    (el as any).getText = () => {
+      return el.textContent || '';
+    };
+    
+    // Add Obsidian-specific class methods
+    (el as any).addClass = (cls: string) => {
+      el.classList.add(cls);
+      return el;
+    };
+    
+    (el as any).removeClass = (cls: string) => {
+      el.classList.remove(cls);
+      return el;
+    };
+    
+    (el as any).toggleClass = (cls: string, force?: boolean) => {
+      el.classList.toggle(cls, force);
+      return el;
+    };
+    
+    // Add Obsidian-specific attribute methods
+    (el as any).setAttr = (attr: string, value: string) => {
+      el.setAttribute(attr, value);
+      return el;
+    };
+    
+    (el as any).getAttr = (attr: string) => {
+      return el.getAttribute(attr);
+    };
+    
+    // Add Obsidian-specific event methods
+    (el as any).onClick = (callback: (evt: MouseEvent) => void) => {
+      el.addEventListener('click', callback);
+      return el;
+    };
+    
+    (el as any).onChange = (callback: (evt: Event) => void) => {
+      el.addEventListener('change', callback);
+      return el;
+    };
+    
+    const self = this;
     (el as any).createEl = (tag: string, options?: any) => {
       const newEl = document.createElement(tag);
       if (options) {
@@ -122,7 +176,7 @@ export class Modal {
         }
       }
       el.appendChild(newEl);
-      this.addObsidianMethods(newEl);
+      self.addObsidianMethods(newEl);
       return newEl;
     };
     
@@ -155,13 +209,61 @@ export class PluginSettingTab {
     this.addObsidianMethods(this.containerEl);
   }
   
-  private addObsidianMethods(el: HTMLElement) {
+  private addObsidianMethods(el: HTMLElement | DocumentFragment) {
     (el as any).empty = () => {
       while (el.firstChild) {
         el.removeChild(el.firstChild);
       }
     };
     
+    // Add Obsidian-specific text methods
+    (el as any).setText = (text: string) => {
+      el.textContent = text;
+      return el;
+    };
+    
+    (el as any).getText = () => {
+      return el.textContent || '';
+    };
+    
+    // Add Obsidian-specific class methods
+    (el as any).addClass = (cls: string) => {
+      el.classList.add(cls);
+      return el;
+    };
+    
+    (el as any).removeClass = (cls: string) => {
+      el.classList.remove(cls);
+      return el;
+    };
+    
+    (el as any).toggleClass = (cls: string, force?: boolean) => {
+      el.classList.toggle(cls, force);
+      return el;
+    };
+    
+    // Add Obsidian-specific attribute methods
+    (el as any).setAttr = (attr: string, value: string) => {
+      el.setAttribute(attr, value);
+      return el;
+    };
+    
+    (el as any).getAttr = (attr: string) => {
+      return el.getAttribute(attr);
+    };
+    
+    // Add Obsidian-specific event methods
+    (el as any).onClick = (callback: (evt: MouseEvent) => void) => {
+      el.addEventListener('click', callback);
+      return el;
+    };
+    
+    (el as any).onChange = (callback: (evt: Event) => void) => {
+      el.addEventListener('change', callback);
+      return el;
+    };
+    
+    const self = this;
     (el as any).createEl = (tag: string, options?: any) => {
       const newEl = document.createElement(tag);
       if (options) {
@@ -174,7 +276,7 @@ export class PluginSettingTab {
         }
       }
       el.appendChild(newEl);
-      this.addObsidianMethods(newEl);
+      self.addObsidianMethods(newEl);
       return newEl;
     };
     

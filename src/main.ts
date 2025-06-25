@@ -43,7 +43,7 @@ export default class GranolaSyncPlugin extends Plugin {
     
     // Initialize services
     this.granolaService = new GranolaService(this.settings.apiKey, this.logger);
-    const pathGenerator = new PathGenerator(this.settings);
+    const pathGenerator = new PathGenerator(() => this.settings);
     this.syncEngine = new SyncEngine(
       this.stateManager, 
       this.granolaService, 

@@ -3,14 +3,16 @@ import { InputValidator } from './input-validator';
 import { format } from 'date-fns';
 
 export class PathGenerator {
-  constructor(private settings: PluginSettings) {}
+  constructor(private getSettings: () => PluginSettings) {}
   
   generatePath(meeting: Meeting): string {
+    const settings = this.getSettings();
+    
     // Start with base folder
-    let pathParts: string[] = [this.settings.targetFolder];
+    let pathParts: string[] = [settings.targetFolder];
     
     // Add subfolder based on organization
-    switch (this.settings.folderOrganization) {
+    switch (settings.folderOrganization) {
       case 'by-date':
         pathParts.push(this.getDateFolder(meeting.date));
         break;
@@ -39,11 +41,12 @@ export class PathGenerator {
   }
   
   private generateFilename(meeting: Meeting): string {
+    const settings = this.getSettings();
     const sanitizedTitle = InputValidator.validateMeetingTitle(meeting.title);
     
-    switch (this.settings.fileNamingFormat) {
+    switch (settings.fileNamingFormat) {
       case 'date-meeting-name':
-        const datePrefix = format(meeting.date, this.settings.dateFormat);
+        const datePrefix = format(meeting.date, settings.dateFormat);
         return `${datePrefix} ${sanitizedTitle}.md`;
         
       case 'meeting-name':
@@ -53,10 +56,12 @@ export class PathGenerator {
   }
   
   private getDateFolder(date: Date): string {
-    switch (this.settings.dateFolderFormat) {
+    const settings = this.getSettings();
+    
+    switch (settings.dateFolderFormat) {
       case 'weekly':
         // Use week format from settings
-        return format(date, this.settings.weekFormat);
+        return format(date, settings.weekFormat);
         
       case 'daily':
       default:

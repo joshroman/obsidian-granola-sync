@@ -1,5 +1,5 @@
 import GranolaSyncPlugin from '../../src/main';
-import { createTestEnvironment, setupPluginMocks, TestEnvironment } from '../setup/test-helpers';
+import { createTestEnvironment, setupPluginMocks, cleanupTestEnvironment, TestEnvironment } from '../setup/test-helpers';
 import { DEFAULT_SETTINGS } from '../../src/types';
 
 describe('Folder Organization E2E Tests', () => {
@@ -7,6 +7,7 @@ describe('Folder Organization E2E Tests', () => {
   let plugin: GranolaSyncPlugin;
 
   beforeEach(async () => {
+    // Create fresh test environment for each test
     env = createTestEnvironment();
     plugin = new GranolaSyncPlugin(env.app as any, env.manifest);
     setupPluginMocks(plugin, { apiKey: 'test-key' });
@@ -16,6 +17,8 @@ describe('Folder Organization E2E Tests', () => {
 
   afterEach(async () => {
     await plugin.onunload();
+    // Clean up test environment to prevent state leakage
+    cleanupTestEnvironment(env);
   });
 
   describe('Flat organization', () => {

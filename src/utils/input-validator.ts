@@ -18,8 +18,12 @@ export class InputValidator {
     let safe = title.replace(this.INVALID_PATH_CHARS, '');
     
     // Handle leading dots (hidden files on Unix)
-    if (safe.startsWith('.')) {
+    if (safe.startsWith('..')) {
+      // Multiple leading dots: prepend underscore
       safe = '_' + safe;
+    } else if (safe.startsWith('.')) {
+      // Single leading dot: replace with underscore
+      safe = '_' + safe.substring(1);
     }
     
     // Handle trailing dots/spaces (Windows)
@@ -31,7 +35,7 @@ export class InputValidator {
     }
     
     // Remove control characters
-    safe = safe.replace(/[\x00-\x1f\x80-\x9f]/g, '');
+    safe = safe.replace(/[\x00-\x1f\x7f\x80-\x9f]/g, '');
     
     // Truncate if too long
     if (safe.length > this.MAX_TITLE_LENGTH) {
@@ -78,6 +82,9 @@ export class InputValidator {
     const title = this.validateMeetingTitle(data.title || 'Untitled');
     
     // Validate date
+    if (!data.date) {
+      throw new Error('Invalid meeting date');
+    }
     const date = new Date(data.date);
     if (isNaN(date.getTime())) {
       throw new Error('Invalid meeting date');
@@ -98,7 +105,7 @@ export class InputValidator {
       : [];
       
     const tags = Array.isArray(data.tags)
-      ? data.tags.filter((t: any) => typeof t === 'string')
+      ? data.tags.filter((t: any) => typeof t === 'string' && t.trim().length > 0)
       : [];
     
     return {
@@ -148,7 +155,7 @@ export class InputValidator {
     const trimmed = apiKey.trim();
     
     // Check minimum length (adjust based on actual Granola API key format)
-    if (trimmed.length < 10) {
+    if (trimmed.length < 8) {
       return false;
     }
     

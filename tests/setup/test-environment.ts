@@ -16,10 +16,39 @@ if (typeof window === 'undefined') {
   };
 }
 
-// Add Obsidian-specific methods to DocumentFragment
-if (typeof DocumentFragment !== 'undefined') {
-  const origCreateEl = DocumentFragment.prototype.appendChild;
-  (DocumentFragment.prototype as any).createEl = function(tag: string, options?: any) {
+// Add Obsidian-specific methods to DocumentFragment and Elements
+function addObsidianMethodsGlobally(target: any) {
+  target.empty = function() {
+    while (this.firstChild) {
+      this.removeChild(this.firstChild);
+    }
+  };
+  
+  target.setText = function(text: string) {
+    this.textContent = text;
+    return this;
+  };
+  
+  target.getText = function() {
+    return this.textContent || '';
+  };
+  
+  target.addClass = function(cls: string) {
+    if (this.classList) this.classList.add(cls);
+    return this;
+  };
+  
+  target.removeClass = function(cls: string) {
+    if (this.classList) this.classList.remove(cls);
+    return this;
+  };
+  
+  target.toggleClass = function(cls: string, force?: boolean) {
+    if (this.classList) this.classList.toggle(cls, force);
+    return this;
+  };
+  
+  target.createEl = function(tag: string, options?: any) {
     const el = document.createElement(tag);
     if (options) {
       if (options.text) el.textContent = options.text;
@@ -31,8 +60,21 @@ if (typeof DocumentFragment !== 'undefined') {
       }
     }
     this.appendChild(el);
+    addObsidianMethodsGlobally(el);
     return el;
   };
+  
+  target.createDiv = function(options?: any) {
+    return this.createEl('div', options);
+  };
+}
+
+// Apply to DocumentFragment and HTMLElement prototypes
+if (typeof DocumentFragment !== 'undefined') {
+  addObsidianMethodsGlobally(DocumentFragment.prototype);
+}
+if (typeof HTMLElement !== 'undefined') {
+  addObsidianMethodsGlobally(HTMLElement.prototype);
 }
 
 export function createMockApp(): App {
@@ -122,8 +164,8 @@ export class TestPlugin {
   async setup() {
     this.plugin = new GranolaSyncPlugin(this.mockApp, createMockManifest());
     
-    // Mock plugin data methods
-    this.plugin.loadData = jest.fn().mockResolvedValue({});
+    // Mock plugin data methods with API key to prevent SetupWizard
+    this.plugin.loadData = jest.fn().mockResolvedValue({ apiKey: 'test-api-key' });
     this.plugin.saveData = jest.fn().mockResolvedValue(undefined);
     
     // Mock plugin UI methods
