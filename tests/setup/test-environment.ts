@@ -4,7 +4,35 @@ import GranolaSyncPlugin from '../../src/main';
 // Mock Obsidian API
 declare global {
   var app: App;
-  var moment: any;
+}
+
+// Polyfill window timers for Node.js environment
+if (typeof window === 'undefined') {
+  (global as any).window = {
+    setTimeout: global.setTimeout.bind(global),
+    clearTimeout: global.clearTimeout.bind(global),
+    setInterval: global.setInterval.bind(global),
+    clearInterval: global.clearInterval.bind(global)
+  };
+}
+
+// Add Obsidian-specific methods to DocumentFragment
+if (typeof DocumentFragment !== 'undefined') {
+  const origCreateEl = DocumentFragment.prototype.appendChild;
+  (DocumentFragment.prototype as any).createEl = function(tag: string, options?: any) {
+    const el = document.createElement(tag);
+    if (options) {
+      if (options.text) el.textContent = options.text;
+      if (options.cls) el.className = options.cls;
+      if (options.attr) {
+        Object.entries(options.attr).forEach(([key, value]) => {
+          el.setAttribute(key, value as string);
+        });
+      }
+    }
+    this.appendChild(el);
+    return el;
+  };
 }
 
 export function createMockApp(): App {
@@ -84,7 +112,7 @@ export interface VaultStructure {
 
 // Test helper for plugin lifecycle
 export class TestPlugin {
-  plugin: GranolaSyncPlugin;
+  plugin!: GranolaSyncPlugin;
   mockApp: any;
   
   constructor() {
@@ -179,7 +207,7 @@ export function generateMockMeeting(overrides: Partial<any> = {}) {
   return {
     id: Math.random().toString(36).substr(2, 9),
     title: 'Test Meeting',
-    date: new Date().toISOString(),
+    date: new Date(),
     transcript: 'This is a test transcript.',
     summary: 'Test meeting summary',
     highlights: ['Key point 1', 'Key point 2'],

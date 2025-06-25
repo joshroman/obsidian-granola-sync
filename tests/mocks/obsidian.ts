@@ -92,10 +92,48 @@ export class Modal {
     this.app = app;
     this.contentEl = document.createElement('div');
     this.titleEl = document.createElement('div');
+    
+    // Add Obsidian-specific methods to DOM elements
+    this.addObsidianMethods(this.contentEl);
+    this.addObsidianMethods(this.titleEl);
   }
   
-  open() {}
-  close() {}
+  private addObsidianMethods(el: HTMLElement) {
+    (el as any).empty = () => {
+      while (el.firstChild) {
+        el.removeChild(el.firstChild);
+      }
+    };
+    
+    (el as any).createEl = (tag: string, options?: any) => {
+      const newEl = document.createElement(tag);
+      if (options) {
+        if (options.text) newEl.textContent = options.text;
+        if (options.cls) newEl.className = options.cls;
+        if (options.attr) {
+          Object.entries(options.attr).forEach(([key, value]) => {
+            newEl.setAttribute(key, value as string);
+          });
+        }
+      }
+      el.appendChild(newEl);
+      this.addObsidianMethods(newEl);
+      return newEl;
+    };
+    
+    (el as any).createDiv = (options?: any) => (el as any).createEl('div', options);
+  }
+  
+  open() {
+    this.onOpen();
+  }
+  
+  close() {
+    this.onClose();
+  }
+  
+  onOpen() {}
+  onClose() {}
 }
 
 export class PluginSettingTab {
@@ -107,6 +145,35 @@ export class PluginSettingTab {
     this.app = app;
     this.plugin = plugin;
     this.containerEl = document.createElement('div');
+    
+    // Add Obsidian-specific methods
+    this.addObsidianMethods(this.containerEl);
+  }
+  
+  private addObsidianMethods(el: HTMLElement) {
+    (el as any).empty = () => {
+      while (el.firstChild) {
+        el.removeChild(el.firstChild);
+      }
+    };
+    
+    (el as any).createEl = (tag: string, options?: any) => {
+      const newEl = document.createElement(tag);
+      if (options) {
+        if (options.text) newEl.textContent = options.text;
+        if (options.cls) newEl.className = options.cls;
+        if (options.attr) {
+          Object.entries(options.attr).forEach(([key, value]) => {
+            newEl.setAttribute(key, value as string);
+          });
+        }
+      }
+      el.appendChild(newEl);
+      this.addObsidianMethods(newEl);
+      return newEl;
+    };
+    
+    (el as any).createDiv = (options?: any) => (el as any).createEl('div', options);
   }
   
   display() {}
@@ -147,3 +214,23 @@ export interface MetadataCache {
   on(event: string, callback: Function): any;
   off(event: string, callback: Function): void;
 }
+
+// Mock ProgressBarComponent
+export class ProgressBarComponent {
+  private containerEl: HTMLElement;
+  private progressBar: HTMLDivElement;
+  
+  constructor(containerEl: HTMLElement) {
+    this.containerEl = containerEl;
+    this.progressBar = document.createElement('div');
+    this.progressBar.className = 'progress-bar';
+    this.containerEl.appendChild(this.progressBar);
+  }
+  
+  setValue(value: number) {
+    this.progressBar.style.width = `${value}%`;
+  }
+}
+
+// Mock EventRef
+export interface EventRef {}

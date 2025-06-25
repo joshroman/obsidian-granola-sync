@@ -39,9 +39,10 @@ export interface SyncError {
 export interface SyncProgress {
   current: number;
   total: number;
+  message: string;
   currentFile?: string;
-  phase: 'fetching' | 'processing' | 'writing' | 'complete';
-  startTime: Date;
+  phase?: 'fetching' | 'processing' | 'writing' | 'complete';
+  startTime?: Date;
   estimatedTimeRemaining?: number;
 }
 

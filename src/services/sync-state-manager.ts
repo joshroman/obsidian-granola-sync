@@ -15,9 +15,10 @@ export interface SyncState {
 }
 
 export class SyncStateManager {
-  private state: SyncState;
+  private state!: SyncState;
   private pathToIdIndex: Record<string, string> = {};
   private saveTimeoutId: number | null = null;
+  private eventRefs: any[] = [];
   
   constructor(private plugin: Plugin) {}
   
@@ -32,11 +33,15 @@ export class SyncStateManager {
     }
     
     // Register vault event listeners
-    this.plugin.registerEvent(
-      this.plugin.app.vault.on('rename', this.handleRename.bind(this))
+    this.eventRefs.push(
+      this.plugin.registerEvent(
+        this.plugin.app.vault.on('rename', this.handleRename.bind(this))
+      )
     );
-    this.plugin.registerEvent(
-      this.plugin.app.vault.on('delete', this.handleDelete.bind(this))
+    this.eventRefs.push(
+      this.plugin.registerEvent(
+        this.plugin.app.vault.on('delete', this.handleDelete.bind(this))
+      )
     );
     
     // Build initial index from vault
@@ -201,5 +206,15 @@ export class SyncStateManager {
       totalFiles: Object.keys(this.state.fileIndex).length,
       deletedFiles: this.state.deletedIds.size
     };
+  }
+  
+  cleanup(): void {
+    // Clear any pending save timeout
+    if (this.saveTimeoutId !== null) {
+      clearTimeout(this.saveTimeoutId);
+      this.saveTimeoutId = null;
+    }
+    // Note: Event refs are automatically cleaned up by Obsidian
+    // when the plugin unloads, but we track them for completeness
   }
 }

@@ -1,8 +1,13 @@
 import { Meeting } from '../types';
 import { InputValidator } from '../utils/input-validator';
+import { Logger } from '../utils/logger';
 
 export class GranolaService {
-  constructor(private apiKey: string) {}
+  constructor(private apiKey: string, private logger: Logger) {}
+  
+  updateApiKey(apiKey: string) {
+    this.apiKey = apiKey;
+  }
   
   async testConnection(): Promise<boolean> {
     // TODO: Implement API connection test
