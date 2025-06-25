@@ -87,6 +87,24 @@ Create a minimal "no-op" Obsidian plugin to validate our development setup and l
    - [ ] Console logs appear in Developer Tools
    - [ ] Changes to main.ts reflect after rebuild + reload
 
+### Phase Workflow After Each Phase
+
+After completing each phase, we follow these steps:
+
+1. **Expert Review with AI Models**
+   - Use Zen MCP server to get code review from o3 and Gemini models
+   - Incorporate their feedback on architecture, performance, and best practices
+   - Address any security concerns or edge cases they identify
+
+2. **Git Commit for Rollback**
+   - Create atomic commit with clear message describing the phase completion
+   - Tag the commit with phase number for easy reference
+   - Ensure working directory is clean before proceeding
+
+3. **Continue to Next Phase**
+   - Only proceed after review feedback is addressed
+   - Carry forward any learnings or improvements suggested
+
 ### Phase 0.5: Critical Infrastructure & Junior Dev Setup
 
 #### Objective

@@ -134,6 +134,26 @@ The plugin integrates with Granola's API (assumed based on implementation plan):
 - Caching to avoid redundant API calls
 - Efficient markdown generation
 
+## Development Workflow
+
+### Phase Completion Process
+
+After completing each development phase:
+
+1. **Expert Review with AI Models**
+   - Use Zen MCP server to request code review from o3 and Gemini models
+   - Incorporate feedback on architecture, performance, security, and best practices
+   - Address any edge cases or concerns identified
+
+2. **Git Commit & Tag**
+   - Create atomic commit with descriptive message for the phase
+   - Tag the commit with phase number (e.g., `phase-1-complete`)
+   - Ensure clean working directory before proceeding
+
+3. **Proceed to Next Phase**
+   - Only continue after addressing review feedback
+   - Document any significant changes or learnings
+
 ## Next Steps
 
 Phase 0 ✅ Complete - Proof of concept plugin created and tested
