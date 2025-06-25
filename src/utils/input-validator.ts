@@ -161,9 +161,12 @@ export class InputValidator {
    * Sanitizes a path to ensure it doesn't exceed OS limits
    */
   static sanitizePath(basePath: string, filename: string): string {
-    const extension = '.md';
     const separator = '/';
     const maxLength = this.MAX_PATH_LENGTH;
+    
+    // Check if filename already has extension
+    const hasExtension = filename.endsWith('.md');
+    const extension = hasExtension ? '' : '.md';
     
     // Calculate available space for filename
     const baseLength = basePath.length + separator.length + extension.length;
@@ -173,10 +176,17 @@ export class InputValidator {
       throw new Error('Base path too long, insufficient space for filename');
     }
     
-    // Truncate filename if needed
-    const truncatedFilename = filename.length > availableLength
-      ? filename.substring(0, availableLength)
-      : filename;
+    // Truncate filename if needed (but preserve extension)
+    let truncatedFilename = filename;
+    if (filename.length > availableLength) {
+      if (hasExtension) {
+        // Remove extension, truncate, then add back
+        const nameWithoutExt = filename.substring(0, filename.length - 3);
+        truncatedFilename = nameWithoutExt.substring(0, availableLength - 3) + '.md';
+      } else {
+        truncatedFilename = filename.substring(0, availableLength);
+      }
+    }
       
     return `${basePath}${separator}${truncatedFilename}${extension}`;
   }

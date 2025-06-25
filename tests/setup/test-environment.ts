@@ -126,6 +126,20 @@ export class TestPlugin {
     this.plugin.loadData = jest.fn().mockResolvedValue({});
     this.plugin.saveData = jest.fn().mockResolvedValue(undefined);
     
+    // Mock plugin UI methods
+    (this.plugin as any).addCommand = jest.fn();
+    (this.plugin as any).addRibbonIcon = jest.fn();
+    (this.plugin as any).addStatusBarItem = jest.fn().mockReturnValue({
+      setText: jest.fn(),
+      addClass: jest.fn(),
+      removeClass: jest.fn(),
+      remove: jest.fn(),
+      onClickEvent: jest.fn()
+    });
+    (this.plugin as any).addSettingTab = jest.fn();
+    (this.plugin as any).registerEvent = jest.fn();
+    (this.plugin as any).registerInterval = jest.fn();
+    
     await this.plugin.onload();
   }
   

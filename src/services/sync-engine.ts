@@ -19,6 +19,7 @@ export class SyncEngine {
   private contentProcessor: ChunkedContentProcessor;
   private errorHandler: ErrorHandler;
   private batchStartTimes: number[] = [];
+  private lastSyncResult: SyncResult | null = null;
   
   constructor(
     private stateManager: SyncStateManager,
@@ -131,6 +132,7 @@ export class SyncEngine {
       result.duration = Date.now() - startTime;
       this.updateProgress(meetings.length, meetings.length, 'Sync complete');
       
+      this.lastSyncResult = result;
       return result;
     } catch (error) {
       const syncError = this.errorHandler.handleError(error, 'Sync operation');
@@ -324,5 +326,9 @@ export class SyncEngine {
     }
     
     return newSize;
+  }
+  
+  getLastSyncResult(): SyncResult | null {
+    return this.lastSyncResult;
   }
 }

@@ -1,5 +1,10 @@
 // Mock Obsidian module for testing
 
+export function normalizePath(path: string): string {
+  // Simple normalization - remove duplicate slashes, trim
+  return path.replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
+}
+
 export class Plugin {
   app: any;
   manifest: any;
