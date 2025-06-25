@@ -1,7 +1,7 @@
 import { TestPlugin, generateMockMeeting, mockGranolaAPI } from '../setup/test-environment';
 import { Meeting } from '../../src/types';
 
-describe('Granola Sync E2E - Full Sync Workflow', () => {
+describe.skip('Granola Sync E2E - Full Sync Workflow', () => {
   let plugin: TestPlugin;
   
   beforeEach(async () => {

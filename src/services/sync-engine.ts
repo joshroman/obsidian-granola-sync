@@ -85,9 +85,12 @@ export class SyncEngine {
       // Fetch meetings
       this.updateProgress(0, 0, 'Fetching meetings...');
       const lastSync = this.stateManager.getLastSync();
+      this.logger.debug(`Last sync: ${lastSync}`);
       const meetings = lastSync 
         ? await this.granolaService.getMeetingsSince(lastSync)
         : await this.granolaService.getAllMeetings();
+      
+      this.logger.debug(`Fetched ${meetings.length} meetings`);
       
       if (meetings.length === 0) {
         this.logger.info('No meetings to sync');
@@ -101,7 +104,9 @@ export class SyncEngine {
       
       // Process in batches with adaptive sizing
       let batchSize = this.getOptimalBatchSize(meetings.length);
-      for (let i = 0; i < meetings.length; i += batchSize) {
+      let processedCount = 0;
+      
+      while (processedCount < meetings.length) {
         if (this.isCancelled) {
           result.success = false;
           result.errors.push({
@@ -113,10 +118,13 @@ export class SyncEngine {
           break;
         }
         
-        const batch = meetings.slice(i, i + batchSize);
+        const batch = meetings.slice(processedCount, processedCount + batchSize);
         const batchStartTime = Date.now();
         
-        await this.processBatch(batch, i, meetings.length, result);
+        await this.processBatch(batch, processedCount, meetings.length, result);
+        
+        // Track actual processed count
+        processedCount += batch.length;
         
         // Adapt batch size based on processing time
         const batchDuration = Date.now() - batchStartTime;

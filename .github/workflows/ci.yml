@@ -2,16 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop, 'phase-*']
   pull_request:
     branches: [main]
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         node-version: [18.x, 20.x]
     
     steps:
@@ -32,14 +33,24 @@ jobs:
     - name: Type Check
       run: npm run typecheck
     
-    - name: Run tests
-      run: npm test
+    - name: Run tests with coverage
+      run: npm test -- --coverage --ci
+      env:
+        TZ: UTC
     
     - name: Build
       run: npm run build
     
+    - name: Verify build output
+      run: |
+        if [ ! -f "main.js" ]; then
+          echo "Build failed: main.js not found"
+          exit 1
+        fi
+      shell: bash
+    
     - name: Upload coverage
-      if: matrix.node-version == '20.x'
+      if: matrix.node-version == '20.x' && matrix.os == 'ubuntu-latest'
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage/lcov.info

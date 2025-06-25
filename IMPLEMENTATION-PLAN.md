@@ -1569,6 +1569,240 @@ async function riskyOperation(): Promise<Result<Data, Error>> {
 - [granola-automation-client](https://www.npmjs.com/package/granola-automation-client)
 - [Plugin Development Guide](https://marcus.se.net/obsidian-plugin-docs/)
 
+### Phase 7: Test Infrastructure Stabilization 🚀 (NEXT)
+
+#### Objective
+Establish CI/CD pipeline and fix all failing tests to achieve 90%+ pass rate
+
+#### Duration: 3-5 days
+
+#### Deliverables
+1. **CI/CD Pipeline (Day 1)**
+   - GitHub Actions for multi-OS testing
+   - Automated test runs on every PR
+   - Code coverage enforcement (85%+)
+   - Type checking and linting gates
+
+2. **Test Environment Fixes (Days 2-3)**
+   - Centralized test configuration
+   - Fixed timezone handling (UTC everywhere)
+   - Deterministic mock factory
+   - Proper async/await patterns
+
+3. **Complete All Tests (Days 4-5)**
+   - Fix 57 failing tests
+   - Implement 3 TODO tests
+   - Remove all placeholder assertions
+   - Achieve 90%+ pass rate
+
+#### Implementation Details
+
+**1. GitHub Actions Workflow**
+```yaml
+# .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --coverage
+      - run: npm run build
+```
+
+**2. Test Environment Setup**
+```typescript
+// tests/setup/test-environment.ts
+process.env.TZ = 'UTC';
+jest.useFakeTimers();
+jest.setSystemTime(new Date('2024-03-20T10:00:00Z'));
+
+// Centralized mock factory
+export const createMockEnvironment = () => ({
+  vault: createMockVault(),
+  api: createMockGranolaAPI(),
+  settings: createDefaultSettings(),
+  // ... consistent mocks
+});
+```
+
+**3. Priority Test Fixes**
+- Timezone issues (affects 15+ tests)
+- Async race conditions (affects 20+ tests)
+- Mock initialization (affects 10+ tests)
+- TODO test implementation (3 tests)
+
+### Phase 8: Data Integrity & Conflict Resolution
+
+#### Objective
+Implement robust conflict handling and data integrity measures
+
+#### Duration: 2-3 days
+
+#### Deliverables
+1. **Conflict Resolution Engine**
+   - Idempotent sync algorithm
+   - Three-way merge for conflicts
+   - User choice preservation
+   - Backup before destructive ops
+
+2. **Data Validation**
+   - Checksum verification
+   - Schema versioning
+   - Migration support
+   - Rollback capability
+
+3. **State Management Hardening**
+   - Transaction-like operations
+   - State corruption recovery
+   - Orphaned data cleanup
+   - Memory-efficient storage
+
+### Phase 9: Observability & Performance
+
+#### Objective
+Add production-grade monitoring and performance optimization
+
+#### Duration: 3-4 days
+
+#### Deliverables
+1. **Structured Logging**
+   - Winston/Pino integration
+   - Log levels and filtering
+   - Correlation IDs
+   - Debug mode toggle
+
+2. **Performance Optimization**
+   - Implement p-queue for batching
+   - Memory usage monitoring
+   - Large vault benchmarks (10k+ files)
+   - Throttling for file operations
+
+3. **Error Tracking**
+   - Circuit breaker pattern
+   - Retry with exponential backoff
+   - User-friendly error messages
+   - Self-diagnostic tools
+
+### Phase 10: Core Engine Hardening
+
+#### Objective
+Ensure rock-solid reliability of sync engine
+
+#### Duration: 3-4 days
+
+#### Deliverables
+1. **Sync Engine Robustness**
+   - AbortController for cancellation
+   - Progress persistence
+   - State machine implementation
+   - Network resilience
+
+2. **API Integration**
+   - Contract testing
+   - Rate limit visual feedback
+   - Offline mode handling
+   - Request queuing
+
+3. **Large Dataset Support**
+   - Streaming for large meetings
+   - Adaptive batch sizing
+   - Memory pressure handling
+   - Progress accuracy
+
+### Phase 11: User Experience Polish
+
+#### Objective
+Create delightful, intuitive user experience
+
+#### Duration: 2-3 days
+
+#### Deliverables
+1. **Setup Experience**
+   - Interactive wizard improvements
+   - Connection validation UI
+   - Permission explanations
+   - Sample vault creation
+
+2. **Sync Experience**
+   - Real-time progress with ETA
+   - Detailed sync reports
+   - Pause/resume capability
+   - Status bar integration
+
+3. **Error Recovery**
+   - Guided troubleshooting
+   - Settings export/import
+   - Reset capabilities
+   - Support info collection
+
+### Phase 12: Documentation & Release Preparation
+
+#### Objective
+Prepare for production release and community submission
+
+#### Duration: 2-3 days
+
+#### Deliverables
+1. **Documentation Suite**
+   - Comprehensive README
+   - API documentation
+   - Troubleshooting guide
+   - Video tutorials
+
+2. **Release Automation**
+   - Semantic versioning
+   - Changelog generation
+   - One-click publish
+   - Beta testing process
+
+3. **Community Readiness**
+   - Plugin submission prep
+   - Support templates
+   - Feature request process
+   - Security disclosure policy
+
+## Updated Timeline
+
+### Week 1: Foundation (Phases 7-8)
+- **Days 1-5**: CI/CD setup and test fixes
+- **Days 6-7**: Data integrity implementation
+
+### Week 2: Reliability (Phases 9-10)
+- **Days 8-11**: Observability and performance
+- **Days 12-14**: Core engine hardening
+
+### Week 3: Polish & Release (Phases 11-12)
+- **Days 15-17**: UX improvements
+- **Days 18-21**: Documentation and release
+
+## Success Metrics by Phase
+
+- **Phase 7**: 90%+ test pass rate, CI/CD operational
+- **Phase 8**: Zero data loss, conflict resolution working
+- **Phase 9**: <100ms UI response, structured logs
+- **Phase 10**: 99.9% sync reliability, graceful failures
+- **Phase 11**: <3 clicks to setup, intuitive UI
+- **Phase 12**: Complete docs, beta feedback positive
+
+## Risk Mitigation
+
+1. **Test Instability**: Fixed environment will resolve
+2. **API Changes**: Contract tests provide protection
+3. **Large Vaults**: Streaming prevents memory issues
+4. **User Confusion**: Clear docs and error messages
+
+## Security Note
+As agreed, API keys will be stored unencrypted in Obsidian's standard plugin data location. Clear documentation will advise users about vault syncing considerations.
+
 ## Deletion and Sync Policies
 
 ### Meeting Deletion Handling

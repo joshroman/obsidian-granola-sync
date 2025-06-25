@@ -282,13 +282,14 @@ export function setupTestEnvironment() {
   global.app = createMockApp();
   global.moment = require('moment');
   
-  // Mock console methods to reduce noise in tests
-  global.console = {
-    ...console,
-    log: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  };
+  // Keep console methods for debugging
+  // Uncomment to suppress console output:
+  // global.console = {
+  //   ...console,
+  //   log: jest.fn(),
+  //   warn: jest.fn(),
+  //   error: jest.fn(),
+  // };
 }
 
 // Cleanup function

@@ -86,7 +86,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   dateFormat: 'yyyy-MM-dd',
   folderOrganization: 'flat',
   dateFolderFormat: 'daily',
-  weekFormat: 'yyyy-[W]ww',
+  weekFormat: "yyyy-'W'ww",
   lastSync: '',
   syncAutomatically: false,
   batchSize: 10,

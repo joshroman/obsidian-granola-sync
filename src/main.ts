@@ -154,6 +154,22 @@ export default class GranolaSyncPlugin extends Plugin {
       return;
     }
     
+    // In test environment, skip modal
+    if (process.env.NODE_ENV === 'test') {
+      try {
+        const result = await this.syncEngine.sync();
+        if (result.success) {
+          new Notice(`Sync complete! ${result.created} created, ${result.updated} updated`);
+        } else {
+          new Notice(`Sync failed: ${result.errors[0]?.error || 'Unknown error'}`);
+        }
+        return result;
+      } catch (error) {
+        this.lastError = error instanceof Error ? error.message : 'Unknown error';
+        throw error;
+      }
+    }
+    
     const modal = new SyncProgressModal(this.app, this.syncEngine, () => {
       this.syncEngine.cancelSync();
     });

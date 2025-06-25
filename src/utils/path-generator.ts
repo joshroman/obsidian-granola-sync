@@ -1,6 +1,6 @@
 import { Meeting, PluginSettings } from '../types';
 import { InputValidator } from './input-validator';
-import { format } from 'date-fns';
+import { format, formatInTimeZone } from 'date-fns-tz';
 
 export class PathGenerator {
   constructor(private getSettings: () => PluginSettings) {}
@@ -46,7 +46,8 @@ export class PathGenerator {
     
     switch (settings.fileNamingFormat) {
       case 'date-meeting-name':
-        const datePrefix = format(meeting.date, settings.dateFormat);
+        // Use UTC to ensure consistent dates across timezones
+        const datePrefix = this.formatDateUTC(meeting.date, settings.dateFormat);
         return `${datePrefix} ${sanitizedTitle}.md`;
         
       case 'meeting-name':
@@ -60,13 +61,21 @@ export class PathGenerator {
     
     switch (settings.dateFolderFormat) {
       case 'weekly':
-        // Use week format from settings
-        return format(date, settings.weekFormat);
+        // Use week format from settings with UTC
+        return this.formatDateUTC(date, settings.weekFormat);
         
       case 'daily':
       default:
-        // Use standard date format
-        return format(date, 'yyyy-MM-dd');
+        // Use standard date format with UTC
+        return this.formatDateUTC(date, 'yyyy-MM-dd');
     }
+  }
+  
+  private formatDateUTC(date: Date, formatString: string): string {
+    // Ensure we're working with a Date object
+    const dateObj = date instanceof Date ? date : new Date(date);
+    
+    // Use formatInTimeZone to force UTC formatting
+    return formatInTimeZone(dateObj, 'UTC', formatString);
   }
 }
