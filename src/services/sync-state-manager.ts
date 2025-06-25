@@ -16,7 +16,8 @@ export interface SyncState {
 
 export class SyncStateManager {
   private state: SyncState;
-  private stateFile = '.granola-sync-state.json';
+  private pathToIdIndex: Record<string, string> = {};
+  private saveTimeoutId: number | null = null;
   
   constructor(private plugin: Plugin) {}
   
@@ -52,12 +53,17 @@ export class SyncStateManager {
   }
   
   private deserializeState(saved: any): SyncState {
-    return {
-      version: saved.version || 1,
-      fileIndex: saved.fileIndex || {},
-      deletedIds: new Set(saved.deletedIds || []),
-      lastSync: saved.lastSync || ''
-    };
+    try {
+      return {
+        version: saved.version || 1,
+        fileIndex: saved.fileIndex || {},
+        deletedIds: new Set(saved.deletedIds || []),
+        lastSync: saved.lastSync || ''
+      };
+    } catch (error) {
+      console.error('Failed to deserialize state, using empty state', error);
+      return this.createEmptyState();
+    }
   }
   
   private serializeState(): any {
@@ -82,17 +88,20 @@ export class SyncStateManager {
   async rebuildIndex(): Promise<void> {
     const files = this.plugin.app.vault.getMarkdownFiles();
     const newIndex: Record<string, string> = {};
+    const newPathIndex: Record<string, string> = {};
     
     for (const file of files) {
       const cache = this.plugin.app.metadataCache.getFileCache(file);
       const granolaId = cache?.frontmatter?.granolaId;
       if (granolaId && typeof granolaId === 'string') {
         newIndex[granolaId] = file.path;
+        newPathIndex[file.path] = granolaId;
       }
     }
     
     this.state.fileIndex = newIndex;
-    await this.saveState();
+    this.pathToIdIndex = newPathIndex;
+    await this.saveStateDebounced();
   }
   
   private async handleRename(file: TAbstractFile, oldPath: string): Promise<void> {
@@ -100,30 +109,50 @@ export class SyncStateManager {
       const cache = this.plugin.app.metadataCache.getFileCache(file);
       const granolaId = cache?.frontmatter?.granolaId;
       if (granolaId && typeof granolaId === 'string') {
+        // Update both indexes
+        delete this.pathToIdIndex[oldPath];
         this.state.fileIndex[granolaId] = file.path;
-        await this.saveState();
+        this.pathToIdIndex[file.path] = granolaId;
+        await this.saveStateDebounced();
       }
     }
   }
   
   private async handleDelete(file: TAbstractFile): Promise<void> {
     if (file instanceof TFile) {
-      // Find granolaId from our index
-      for (const [id, path] of Object.entries(this.state.fileIndex)) {
-        if (path === file.path) {
-          delete this.state.fileIndex[id];
-          this.state.deletedIds.add(id);
-          await this.saveState();
-          break;
-        }
+      // Use O(1) lookup with path index
+      const granolaId = this.pathToIdIndex[file.path];
+      if (granolaId) {
+        delete this.state.fileIndex[granolaId];
+        delete this.pathToIdIndex[file.path];
+        this.state.deletedIds.add(granolaId);
+        await this.saveStateDebounced();
       }
     }
   }
   
   async saveState(): Promise<void> {
-    const data = await this.plugin.loadData() || {};
-    data.syncState = this.serializeState();
-    await this.plugin.saveData(data);
+    try {
+      const data = await this.plugin.loadData() || {};
+      data.syncState = this.serializeState();
+      await this.plugin.saveData(data);
+    } catch (error) {
+      console.error('Failed to save sync state', error);
+      throw error; // Re-throw to notify caller
+    }
+  }
+  
+  private async saveStateDebounced(): Promise<void> {
+    // Cancel any pending save
+    if (this.saveTimeoutId !== null) {
+      clearTimeout(this.saveTimeoutId);
+    }
+    
+    // Schedule new save
+    this.saveTimeoutId = window.setTimeout(async () => {
+      this.saveTimeoutId = null;
+      await this.saveState();
+    }, 500);
   }
   
   getFilePath(granolaId: string): string | undefined {
@@ -135,13 +164,24 @@ export class SyncStateManager {
   }
   
   addFile(granolaId: string, path: string): void {
+    // Update both indexes
+    const oldPath = this.state.fileIndex[granolaId];
+    if (oldPath) {
+      delete this.pathToIdIndex[oldPath];
+    }
     this.state.fileIndex[granolaId] = path;
+    this.pathToIdIndex[path] = granolaId;
     // If it was previously deleted, remove from deleted set
     this.state.deletedIds.delete(granolaId);
   }
   
   updatePath(granolaId: string, newPath: string): void {
+    const oldPath = this.state.fileIndex[granolaId];
+    if (oldPath) {
+      delete this.pathToIdIndex[oldPath];
+    }
     this.state.fileIndex[granolaId] = newPath;
+    this.pathToIdIndex[newPath] = granolaId;
   }
   
   setLastSync(timestamp: string): void {

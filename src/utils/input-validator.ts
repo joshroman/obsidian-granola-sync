@@ -1,3 +1,5 @@
+import { Meeting, Attachment } from '../types';
+
 export class InputValidator {
   private static readonly MAX_PATH_LENGTH = 255;
   private static readonly MAX_TITLE_LENGTH = 200;
@@ -178,27 +180,4 @@ export class InputValidator {
       
     return `${basePath}${separator}${truncatedFilename}${extension}`;
   }
-}
-
-// Type definitions for validated data
-export interface Meeting {
-  id: string;
-  title: string;
-  date: Date;
-  transcript?: string;
-  summary?: string;
-  highlights: string[];
-  attendees: string[];
-  duration?: number;
-  granolaFolder?: string;
-  tags: string[];
-  attachments: Attachment[];
-}
-
-export interface Attachment {
-  id: string;
-  name: string;
-  url: string;
-  type: string;
-  size: number;
 }

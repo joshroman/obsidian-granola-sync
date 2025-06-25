@@ -66,6 +66,10 @@ export interface PluginSettings {
   syncAutomatically: boolean;
   batchSize: number; // Number of meetings to process at once
   requestTimeout: number; // API request timeout in milliseconds
+  
+  // Debug options
+  debugMode: boolean;
+  logLevel: 'error' | 'warn' | 'info' | 'debug';
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -80,4 +84,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   syncAutomatically: false,
   batchSize: 10,
   requestTimeout: 30000, // 30 seconds
+  debugMode: false,
+  logLevel: 'error',
 };
