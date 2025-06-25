@@ -16,33 +16,122 @@ export class SettingsTab extends PluginSettingTab {
     containerEl.createEl('h2', { text: 'Granola Sync Settings' });
 
     // Security notice
-    containerEl.createEl('div', {
-      text: '⚠️ Your API key is stored locally in your vault. ' +
-        'Do not sync .obsidian folder if sharing your vault.',
-      cls: 'setting-item-description mod-warning'
-    });
-
-    // API key field
-    new Setting(containerEl)
-      .setName('Granola API Key')
-      .setDesc('Your API key from Granola settings')
-      .addText(text => {
-        text
-          .setPlaceholder('Enter your API key')
-          .setValue(this.plugin.settings.apiKey)
-          .onChange(async (value) => {
-            this.plugin.settings.apiKey = value;
-            await this.plugin.saveSettings();
-          });
-        text.inputEl.type = 'password';
-      })
-      .addButton(button => {
-        button
-          .setButtonText('Test Connection')
-          .onClick(async () => {
-            await this.plugin.testConnection();
-          });
+    const isAutoMode = !this.plugin.settings.useManualToken && this.plugin.settings.granolaConsentGiven;
+    if (!isAutoMode) {
+      containerEl.createEl('div', {
+        text: '⚠️ Your API key is stored locally in your vault. ' +
+          'Do not sync .obsidian folder if sharing your vault.',
+        cls: 'setting-item-description mod-warning'
       });
+    }
+
+    // API key field (only show in manual mode)
+    if (!isAutoMode) {
+      new Setting(containerEl)
+        .setName('Granola API Key')
+        .setDesc('Your API key from Granola settings')
+        .addText(text => {
+          text
+            .setPlaceholder('Enter your API key')
+            .setValue(this.plugin.settings.apiKey)
+            .onChange(async (value) => {
+              this.plugin.settings.apiKey = value;
+              await this.plugin.saveSettings();
+            });
+          text.inputEl.type = 'password';
+        })
+        .addButton(button => {
+          button
+            .setButtonText('Test Connection')
+            .onClick(async () => {
+              await this.plugin.testConnection();
+              // Refresh display to update connection status
+              this.display();
+            });
+        });
+    } else {
+      // Show automatic mode info
+      new Setting(containerEl)
+        .setName('Authentication Mode')
+        .setDesc('Using automatic token from Granola desktop app')
+        .addButton(button => {
+          button
+            .setButtonText('Test Connection')
+            .setCta()
+            .onClick(async () => {
+              await this.plugin.testConnection();
+              // Refresh display to update connection status
+              this.display();
+            });
+        })
+        .addButton(button => {
+          button
+            .setButtonText('Switch to Manual')
+            .onClick(async () => {
+              this.plugin.settings.useManualToken = true;
+              this.plugin.settings.granolaConsentGiven = false;
+              await this.plugin.saveSettings();
+              // Reinitialize services
+              await this.plugin.onload();
+              this.display();
+            });
+        });
+    }
+
+    // Connection status display
+    const connectionStatusEl = containerEl.createEl('div', {
+      cls: 'setting-item'
+    });
+    
+    connectionStatusEl.createEl('div', {
+      text: 'Connection Status',
+      cls: 'setting-item-name'
+    });
+    
+    const statusDiv = connectionStatusEl.createEl('div', {
+      cls: 'setting-item-description'
+    });
+    
+    // Determine connection status
+    const hasApiKey = !!this.plugin.settings.apiKey || 
+                     (this.plugin.tokenManager?.hasValidToken() ?? false);
+    
+    if (!hasApiKey && !isAutoMode) {
+      statusDiv.createEl('span', {
+        text: '❌ Not configured',
+        cls: 'mod-warning'
+      });
+    } else if (this.plugin.lastError) {
+      statusDiv.createEl('span', {
+        text: `❌ Connection failed: ${this.plugin.lastError}`,
+        cls: 'mod-warning'
+      });
+    } else if (this.plugin.granolaService) {
+      // Check if we've successfully connected before
+      const lastSync = this.plugin.settings.lastSync;
+      if (lastSync) {
+        statusDiv.createEl('span', {
+          text: '✅ Connected',
+          cls: 'mod-success'
+        });
+        if (isAutoMode) {
+          statusDiv.createEl('span', {
+            text: ' (automatic token)',
+            cls: 'setting-item-description'
+          });
+        }
+      } else {
+        statusDiv.createEl('span', {
+          text: '🔄 Ready to sync',
+          cls: 'setting-item-description'
+        });
+      }
+    } else {
+      statusDiv.createEl('span', {
+        text: '⚠️ Service not initialized',
+        cls: 'mod-warning'
+      });
+    }
 
     // Target folder
     new Setting(containerEl)

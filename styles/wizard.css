@@ -1,6 +1,6 @@
 .granola-setup-wizard {
-  min-width: 600px;
-  max-width: 800px;
+  width: 500px;
+  max-width: 90vw;
 }
 
 .wizard-header {

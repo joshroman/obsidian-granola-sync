@@ -61,18 +61,28 @@ export interface PluginSettings {
   targetFolder: string;
   
   // File naming options
-  fileNamingFormat: 'meeting-name' | 'date-meeting-name';
-  dateFormat: string; // e.g., 'YYYY-MM-DD' for file names
+  includeDateInFilename: boolean; // Whether to include date in filename
+  dateFormat: string; // e.g., 'yyyy-MM-dd' for file names
   
   // Folder organization options
   folderOrganization: 'flat' | 'by-date' | 'mirror-granola';
   dateFolderFormat: 'daily' | 'weekly'; // only used when folderOrganization is 'by-date'
-  weekFormat: string; // e.g., 'YYYY-[W]WW' for weekly folders
+  weekFormat: string; // e.g., 'yyyy-[W]ww' for weekly folders
   
+  // Sync settings
   lastSync: string;
-  syncAutomatically: boolean;
+  autoSync: boolean; // Renamed from syncAutomatically for consistency with wizard
+  syncInterval: number; // How often to sync in milliseconds
+  showProgress: boolean; // Whether to show detailed progress during sync
+  
+  // Performance settings
   batchSize: number; // Number of meetings to process at once
   requestTimeout: number; // API request timeout in milliseconds
+  
+  // Auto-detection settings
+  granolaConsentGiven: boolean; // User has consented to auto-detection
+  useManualToken: boolean; // Force manual token entry
+  manualApiToken?: string; // Manually entered token (for migration)
   
   // Debug options
   debugMode: boolean;
@@ -82,15 +92,19 @@ export interface PluginSettings {
 export const DEFAULT_SETTINGS: PluginSettings = {
   apiKey: '',
   targetFolder: 'Meetings',
-  fileNamingFormat: 'date-meeting-name',
+  includeDateInFilename: true,
   dateFormat: 'yyyy-MM-dd',
   folderOrganization: 'flat',
   dateFolderFormat: 'daily',
   weekFormat: "yyyy-'W'ww",
   lastSync: '',
-  syncAutomatically: false,
+  autoSync: false,
+  syncInterval: 900000, // 15 minutes
+  showProgress: true,
   batchSize: 10,
   requestTimeout: 30000, // 30 seconds
+  granolaConsentGiven: false,
+  useManualToken: false,
   debugMode: false,
   logLevel: 'error',
 };

@@ -1,5 +1,5 @@
 import { SyncStateManager } from './sync-state-manager';
-import { GranolaService } from './granola-service';
+import { EnhancedGranolaService } from './enhanced-granola-service';
 import { PathGenerator } from '../utils/path-generator';
 import { FileManager } from '../utils/file-manager';
 import { MarkdownBuilder } from '../utils/markdown-builder';
@@ -23,7 +23,7 @@ export class SyncEngine {
   
   constructor(
     private stateManager: SyncStateManager,
-    private granolaService: GranolaService,
+    private granolaService: EnhancedGranolaService,
     private pathGenerator: PathGenerator,
     private plugin: Plugin,
     private logger: Logger

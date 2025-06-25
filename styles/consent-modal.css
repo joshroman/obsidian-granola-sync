@@ -1,0 +1,75 @@
+/* Consent Modal Styles */
+.granola-consent-modal {
+  max-width: 500px;
+}
+
+.granola-consent-modal h2 {
+  margin-bottom: 1em;
+  text-align: center;
+}
+
+.granola-consent-modal h3 {
+  font-size: 1.1em;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.granola-consent-details {
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+  padding: 1em;
+  margin: 1em 0;
+}
+
+.granola-consent-details ul {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.granola-consent-details li {
+  margin: 0.5em 0;
+  line-height: 1.5;
+}
+
+.granola-consent-warning {
+  background-color: var(--background-modifier-error-rgb);
+  background-color: rgba(var(--background-modifier-error-rgb), 0.1);
+  border: 1px solid rgba(var(--background-modifier-error-rgb), 0.3);
+  border-radius: 8px;
+  padding: 1em;
+  margin: 1em 0;
+}
+
+.granola-consent-warning .warning-title {
+  font-weight: bold;
+  margin-bottom: 0.5em;
+  color: var(--text-error);
+}
+
+.granola-consent-warning p:last-child {
+  margin-bottom: 0;
+  font-size: 0.9em;
+}
+
+.granola-consent-privacy {
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+  padding: 1em;
+  margin: 1em 0;
+  font-size: 0.9em;
+}
+
+.granola-consent-privacy p {
+  margin: 0;
+}
+
+.granola-button-container {
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+  margin-top: 1.5em;
+}
+
+.granola-button-container button {
+  min-width: 120px;
+}

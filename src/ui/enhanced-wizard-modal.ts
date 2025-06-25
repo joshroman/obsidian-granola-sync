@@ -5,6 +5,9 @@ import { EnhancedGranolaService } from '../services/enhanced-granola-service';
 import { StructuredLogger } from '../utils/structured-logger';
 import { PerformanceMonitor } from '../utils/performance-monitor';
 import { ErrorTracker } from '../utils/error-tracker';
+import { TokenRetrievalService } from '../services/token-retrieval-service';
+import { TokenManager } from '../services/token-manager';
+import { GranolaConsentModal } from './consent-modal';
 
 export interface WizardStep {
   id: string;
@@ -46,38 +49,17 @@ export class EnhancedSetupWizard extends Modal {
       {
         id: 'api-key',
         title: 'Connect to Granola',
-        description: 'Enter your Granola API key to connect your account. You can find this in your Granola account settings.',
+        description: 'Automatically connect to your local Granola installation.',
         validate: async () => {
-          const apiKey = this.settings.apiKey?.trim();
-          if (!apiKey) {
-            return { valid: false, error: 'Please enter your API key' };
+          // Check if we have a valid token
+          const hasValidToken = this.plugin.tokenManager?.hasTokens() || 
+                               (this.settings.apiKey && this.settings.apiKey.trim().length > 0);
+          
+          if (!hasValidToken) {
+            return { valid: false, error: 'No connection established. Please ensure Granola is installed and you are logged in.' };
           }
           
-          // Test the API connection
-          try {
-            if (!this.testApiService) {
-              const performanceMonitor = new PerformanceMonitor(this.logger);
-              const errorTracker = new ErrorTracker(this.logger);
-              this.testApiService = new EnhancedGranolaService(
-                { apiKey },
-                this.logger,
-                performanceMonitor,
-                errorTracker
-              );
-            }
-            
-            const connected = await this.testApiService.testConnection();
-            if (!connected) {
-              return { valid: false, error: 'Failed to connect. Please check your API key.' };
-            }
-            
-            return { valid: true };
-          } catch (error) {
-            return { 
-              valid: false, 
-              error: `Connection error: ${error instanceof Error ? error.message : 'Unknown error'}` 
-            };
-          }
+          return { valid: true };
         },
         canSkip: false
       },
@@ -237,34 +219,123 @@ export class EnhancedSetupWizard extends Modal {
     });
   }
 
-  private renderApiKeyStep(container: HTMLElement): void {
+  private async renderApiKeyStep(container: HTMLElement): Promise<void> {
     const apiKeyContainer = container.createDiv('api-key-container');
     
-    new Setting(apiKeyContainer)
-      .setName('API Key')
-      .setDesc('Your Granola API key')
-      .addText(text => text
-        .setPlaceholder('Enter your API key...')
-        .setValue(this.settings.apiKey || '')
-        .onChange(value => {
-          this.settings.apiKey = value;
-        }));
+    // Always attempt auto-connection (no manual option)
+    await this.attemptAutoConnection(apiKeyContainer);
+  }
+  
+  private async attemptAutoConnection(container: HTMLElement): Promise<void> {
+    container.empty();
     
-    // Add help link
-    const helpText = apiKeyContainer.createEl('p', { 
-      text: 'Need help finding your API key? ',
-      cls: 'setting-item-description'
-    });
-    helpText.createEl('a', {
-      text: 'Visit Granola Settings',
-      href: 'https://app.granola.so/settings'
+    const statusDiv = container.createDiv('auto-connection-status');
+    statusDiv.createEl('h4', { text: 'Connecting to Granola' });
+    
+    const statusText = statusDiv.createEl('p', { 
+      text: '🔄 Searching for Granola installation...',
+      cls: 'status-message'
     });
     
-    // Connection status
-    const statusContainer = apiKeyContainer.createDiv('connection-status');
-    if (this.settings.apiKey) {
-      this.updateConnectionStatus(statusContainer);
+    try {
+      // Use synchronous method like granola-ts-client
+      console.log('[Granola Plugin Debug] Attempting to retrieve token info...');
+      const tokenInfo = TokenRetrievalService.getTokenInfo();
+      
+      if (tokenInfo) {
+        console.log('[Granola Plugin Debug] Token info retrieved:', { hasToken: !!tokenInfo.accessToken, version: tokenInfo.granolaVersion });
+        statusText.setText('✅ Granola detected! Testing connection...');
+        
+        // Test the connection with auto-detected token
+        const performanceMonitor = new PerformanceMonitor(this.logger);
+        const errorTracker = new ErrorTracker(this.logger);
+        this.testApiService = new EnhancedGranolaService(
+          { 
+            apiKey: tokenInfo.accessToken,
+            granolaVersion: tokenInfo.granolaVersion 
+          },
+          this.logger,
+          performanceMonitor,
+          errorTracker
+        );
+        
+        console.log('[Granola Plugin Debug] Testing API connection...');
+        const connected = await this.testApiService.testConnection();
+        console.log('[Granola Plugin Debug] Connection test result:', connected);
+        
+        if (connected) {
+          // Success! Initialize token manager
+          if (!this.plugin.tokenManager) {
+            this.plugin.tokenManager = new TokenManager(this.plugin, this.logger);
+            await this.plugin.tokenManager.initialize();
+          }
+          
+          this.settings.apiKey = tokenInfo.accessToken;
+          
+          statusText.setText('✅ Connected successfully!');
+          
+          const successDiv = statusDiv.createDiv('success-info');
+          successDiv.createEl('p', {
+            text: `Granola version ${tokenInfo.granolaVersion || 'unknown'} detected.`,
+            cls: 'version-info'
+          });
+          
+          // Add experimental warning
+          const warningDiv = statusDiv.createDiv('experimental-warning');
+          warningDiv.createEl('p', {
+            text: '⚠️ Note: This automatic connection is experimental and may break if Granola updates.',
+            cls: 'warning-text'
+          });
+          
+          // Mark consent as given since they're using the connection
+          this.plugin.settings.granolaConsentGiven = true;
+          await this.plugin.saveSettings();
+          
+          // Enable next button
+          this.updateNavigationButtons();
+        } else {
+          throw new Error('Connection test failed');
+        }
+      } else {
+        console.log('[Granola Plugin Debug] No token info found');
+        throw new Error('No token found');
+      }
+    } catch (error) {
+      console.error('[Granola Plugin Debug] Auto-connection failed:', error);
+      this.handleAutoConnectionError(container, error);
     }
+  }
+  
+  private handleAutoConnectionError(container: HTMLElement, error: any): void {
+    container.empty();
+    
+    const errorDiv = container.createDiv('connection-error');
+    errorDiv.createEl('h4', { text: '❌ Connection Failed' });
+    
+    const errorMessage = TokenRetrievalService.getErrorMessage(error);
+    errorDiv.createEl('p', {
+      text: errorMessage,
+      cls: 'error-message'
+    });
+    
+    // Provide helpful instructions
+    const helpDiv = errorDiv.createDiv('error-help');
+    helpDiv.createEl('p', { text: 'Please ensure:' });
+    const helpList = helpDiv.createEl('ul');
+    helpList.createEl('li', { text: 'Granola is installed on your computer' });
+    helpList.createEl('li', { text: 'You have logged into Granola at least once' });
+    helpList.createEl('li', { text: 'Granola is running' });
+    
+    // Only retry button - no manual option
+    const buttonDiv = errorDiv.createDiv('button-container');
+    
+    const retryButton = buttonDiv.createEl('button', {
+      text: 'Try Again',
+      cls: 'mod-cta'
+    });
+    retryButton.addEventListener('click', () => {
+      this.attemptAutoConnection(container);
+    });
   }
 
   private async updateConnectionStatus(container: HTMLElement): Promise<void> {
@@ -568,5 +639,10 @@ export class EnhancedSetupWizard extends Modal {
   onClose() {
     const { contentEl } = this;
     contentEl.empty();
+  }
+
+  private updateNavigationButtons(): void {
+    // Re-render to update button states
+    this.render();
   }
 }

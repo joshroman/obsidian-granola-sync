@@ -1,9 +1,9 @@
 {
-  "id": "granola-sync",
+  "id": "obsidian-granola-sync",
   "name": "Granola Sync",
-  "version": "0.0.1",
-  "minAppVersion": "0.15.0",
-  "description": "Proof of concept for Granola meeting sync",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Sync your Granola meeting notes to Obsidian with flexible organization, conflict resolution, and performance optimization",
   "author": "Josh Roman",
   "authorUrl": "https://github.com/joshroman",
   "isDesktopOnly": true
