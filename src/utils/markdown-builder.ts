@@ -62,6 +62,7 @@ export class MarkdownBuilder {
     
     // Summary
     if (meeting.summary) {
+      console.log('[Granola Plugin Debug] Adding summary from meeting.summary field');
       lines.push('## Summary');
       lines.push(meeting.summary);
       lines.push('');
@@ -78,7 +79,10 @@ export class MarkdownBuilder {
     
     // Panel sections
     if (meeting.panels && meeting.panels.length > 0) {
+      console.log('[Granola Plugin Debug] Building panel sections for', meeting.panels.length, 'panels');
       lines.push(...this.buildPanelSections(meeting.panels, panelProcessor));
+    } else {
+      console.log('[Granola Plugin Debug] No panels found for meeting:', meeting.title);
     }
     
     // Transcript
@@ -216,32 +220,59 @@ export class MarkdownBuilder {
     // Use injected processor or create default
     const processor = panelProcessor || new PanelProcessor(new StructuredLogger());
     
+    console.log('[Granola Plugin Debug] Processing', panels.length, 'panels');
     for (const panel of panels) {
-      // Add panel header
-      lines.push(`## Panel: ${panel.title}`);
-      lines.push('');
+      console.log('[Granola Plugin Debug] Processing panel:', panel.title, 'ID:', panel.panel_template_id);
       
       // Extract structured content from the panel
       const sections = processor.extractStructuredContent(panel);
       
       // If we have structured sections, format them
       if (Object.keys(sections).length > 0) {
-        for (const [heading, content] of Object.entries(sections)) {
-          // Skip if this is just a wrapper "Content" section
-          if (heading === 'Content' && Object.keys(sections).length > 1) {
-            continue;
-          }
-          
-          // Add section heading if it's not the panel title
-          if (heading !== panel.title && heading !== 'Content') {
-            lines.push(`### ${heading}`);
+        console.log('[Granola Plugin Debug] Panel sections:', sections);
+        
+        // Special case: If a panel contains multiple sections, render them as top-level sections
+        // This handles templates like "Josh Template" that have multiple H1 sections
+        if (Object.keys(sections).length > 1 || (Object.keys(sections).length === 1 && !sections['Content'])) {
+          // Add panel ID comment before the first section
+          let firstSection = true;
+          // Render each section as a top-level H2
+          for (const [heading, content] of Object.entries(sections)) {
+            // Skip empty content
+            if (!content.trim()) continue;
+            
+            // Add section as H2
+            lines.push(`## ${heading}`);
+            if (firstSection) {
+              lines.push(`<!-- panel-id: ${panel.panel_template_id} -->`);
+              firstSection = false;
+            }
             lines.push('');
-          }
-          
-          // Add section content
-          if (content.trim()) {
             lines.push(content);
             lines.push('');
+          }
+        } else {
+          // Single section or just "Content" - render with panel header
+          lines.push(`## Panel: ${panel.title}`);
+          lines.push(`<!-- panel-id: ${panel.panel_template_id} -->`);
+          lines.push('');
+          
+          for (const [heading, content] of Object.entries(sections)) {
+            if (heading === 'Content' || heading === panel.title) {
+              // Don't add redundant heading
+              if (content.trim()) {
+                lines.push(content);
+                lines.push('');
+              }
+            } else {
+              // Add as subsection
+              lines.push(`### ${heading}`);
+              lines.push('');
+              if (content.trim()) {
+                lines.push(content);
+                lines.push('');
+              }
+            }
           }
         }
       } else if (panel.original_content) {

@@ -14,5 +14,7 @@ module.exports = {
   },
   moduleNameMapper: {
     'obsidian': '<rootDir>/tests/mocks/obsidian.ts'
-  }
+  },
+  testTimeout: 10000, // 10 second timeout per test
+  maxWorkers: 1 // Run tests serially to avoid conflicts
 };

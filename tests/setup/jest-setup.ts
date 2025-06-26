@@ -1,6 +1,40 @@
 import { setupTestEnvironment } from './test-environment';
 import '@testing-library/jest-dom';
 
+// Mock the structured logger module
+jest.mock('../../src/utils/structured-logger', () => {
+  const MockLogger = {
+    error: jest.fn((msg, err) => console.error(`[Mock] ERROR: ${msg}`, err)),
+    warn: jest.fn((msg, ...args) => console.warn(`[Mock] WARN: ${msg}`, ...args)),
+    info: jest.fn((msg, ...args) => console.log(`[Mock] INFO: ${msg}`, ...args)),
+    debug: jest.fn(), // Silently ignore debug messages
+    time: jest.fn(),
+    timeEnd: jest.fn(),
+    startOperation: jest.fn((op) => `op-${op}-${Date.now()}`),
+    endOperation: jest.fn(),
+    getMetrics: jest.fn(() => ({
+      totalLogs: 0,
+      errorCount: 0,
+      warnCount: 0,
+      infoCount: 0,
+      debugCount: 0,
+      components: {}
+    })),
+    getRecentLogs: jest.fn(() => []),
+    exportLogs: jest.fn(() => ''),
+    clearLogs: jest.fn()
+  };
+
+  return {
+    StructuredLogger: jest.fn().mockImplementation(() => MockLogger),
+    Logger: jest.fn().mockImplementation(() => MockLogger),
+    LogLevel: {},
+    LogContext: {},
+    LogEntry: {},
+    LogMetrics: {}
+  };
+});
+
 // Set timezone to UTC for consistent tests
 process.env.TZ = 'UTC';
 
@@ -22,10 +56,11 @@ global.Date = class extends originalDate {
   }
 } as any;
 
-// Set up fake timers
+// Set up fake timers with legacy mode to avoid issues
 beforeAll(() => {
-  jest.useFakeTimers();
-  jest.setSystemTime(FIXED_DATE);
+  jest.useFakeTimers({
+    legacyFakeTimers: true
+  });
 });
 
 afterAll(() => {
@@ -51,8 +86,8 @@ beforeEach(() => {
   // Reset modules to ensure clean state
   jest.resetModules();
   
-  // Reset fake timers
-  jest.setSystemTime(FIXED_DATE);
+  // Advance timers if needed
+  jest.runOnlyPendingTimers();
 });
 
 afterEach(() => {

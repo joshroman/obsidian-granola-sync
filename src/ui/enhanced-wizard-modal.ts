@@ -25,6 +25,11 @@ export class EnhancedSetupWizard extends Modal {
   private testApiService: EnhancedGranolaService | null = null;
   private onComplete: (settings: PluginSettings) => void;
   private navigationStack: number[] = [];
+  private isConnecting = false;
+  
+  // State management for form controls
+  private templateSyncMode: 'single' | 'all' = 'single';
+  private syncMode: 'manual' | 'automatic' = 'manual';
   
   constructor(
     app: App,
@@ -36,6 +41,10 @@ export class EnhancedSetupWizard extends Modal {
     this.logger = new StructuredLogger('SetupWizard', plugin);
     this.initializeSteps();
     this.settings = { ...plugin.settings };
+    
+    // Initialize state from settings
+    this.templateSyncMode = this.settings.templateFilterEnabled ? 'all' : 'single';
+    this.syncMode = this.settings.autoSync ? 'automatic' : 'manual';
   }
 
   private initializeSteps(): void {
@@ -86,19 +95,31 @@ export class EnhancedSetupWizard extends Modal {
         id: 'organization',
         title: 'Organize Your Notes',
         description: 'Choose how to organize your meeting notes within the folder.',
-        canSkip: true
+        canSkip: false
       },
       {
         id: 'file-naming',
         title: 'File Naming Convention',
         description: 'Customize how your meeting note files are named.',
-        canSkip: true
+        canSkip: false
+      },
+      {
+        id: 'template-settings',
+        title: 'Template Configuration',
+        description: 'Choose how to handle meeting templates and panels.',
+        canSkip: false
+      },
+      {
+        id: 'transcript-settings',
+        title: 'Transcript Settings',
+        description: 'Configure transcript inclusion in your meeting notes.',
+        canSkip: false
       },
       {
         id: 'sync-settings',
         title: 'Sync Preferences',
         description: 'Configure automatic sync and other preferences.',
-        canSkip: true
+        canSkip: false
       },
       {
         id: 'complete',
@@ -153,16 +174,19 @@ export class EnhancedSetupWizard extends Modal {
     // Spacer
     footer.createDiv('spacer');
     
+    // Button group for Skip/Next
+    const buttonGroup = footer.createDiv('button-group');
+    
     // Skip button (if allowed)
     if (step.canSkip && this.currentStep < this.steps.length - 1) {
-      new ButtonComponent(footer)
+      new ButtonComponent(buttonGroup)
         .setButtonText('Skip')
         .onClick(() => this.nextStep(true));
     }
     
     // Next/Complete button
     const isLastStep = this.currentStep === this.steps.length - 1;
-    const nextButton = new ButtonComponent(footer)
+    const nextButton = new ButtonComponent(buttonGroup)
       .setButtonText(isLastStep ? 'Start Syncing' : 'Next')
       .setCta()
       .onClick(async () => {
@@ -190,6 +214,12 @@ export class EnhancedSetupWizard extends Modal {
         break;
       case 'file-naming':
         this.renderFileNamingStep(container);
+        break;
+      case 'template-settings':
+        this.renderTemplateSettingsStep(container);
+        break;
+      case 'transcript-settings':
+        this.renderTranscriptSettingsStep(container);
         break;
       case 'sync-settings':
         this.renderSyncSettingsStep(container);
@@ -227,6 +257,12 @@ export class EnhancedSetupWizard extends Modal {
   }
   
   private async attemptAutoConnection(container: HTMLElement): Promise<void> {
+    // Prevent multiple simultaneous connection attempts
+    if (this.isConnecting) {
+      return;
+    }
+    
+    this.isConnecting = true;
     container.empty();
     
     const statusDiv = container.createDiv('auto-connection-status');
@@ -275,10 +311,17 @@ export class EnhancedSetupWizard extends Modal {
           statusText.setText('✅ Connected successfully!');
           
           const successDiv = statusDiv.createDiv('success-info');
-          successDiv.createEl('p', {
-            text: `Granola version ${tokenInfo.granolaVersion || 'unknown'} detected.`,
-            cls: 'version-info'
-          });
+          if (tokenInfo.granolaVersion && tokenInfo.granolaVersion !== 'unknown') {
+            successDiv.createEl('p', {
+              text: `Granola version ${tokenInfo.granolaVersion} detected.`,
+              cls: 'version-info'
+            });
+          } else {
+            successDiv.createEl('p', {
+              text: 'Granola detected and connected.',
+              cls: 'version-info'
+            });
+          }
           
           // Add experimental warning
           const warningDiv = statusDiv.createDiv('experimental-warning');
@@ -303,6 +346,8 @@ export class EnhancedSetupWizard extends Modal {
     } catch (error) {
       console.error('[Granola Plugin Debug] Auto-connection failed:', error);
       this.handleAutoConnectionError(container, error);
+    } finally {
+      this.isConnecting = false;
     }
   }
   
@@ -334,7 +379,8 @@ export class EnhancedSetupWizard extends Modal {
       cls: 'mod-cta'
     });
     retryButton.addEventListener('click', () => {
-      this.attemptAutoConnection(container);
+      this.isConnecting = false; // Reset flag before retry
+      this.attemptAutoConnection(container.parentElement || container);
     });
   }
 
@@ -353,6 +399,12 @@ export class EnhancedSetupWizard extends Modal {
   }
 
   private renderTargetFolderStep(container: HTMLElement): void {
+    // Add note about top-level folder restriction at the top
+    const note = container.createDiv('folder-note');
+    note.createEl('p', { 
+      text: 'ℹ️ Note: The meetings folder must be located at the top level of your vault.' 
+    });
+    
     new Setting(container)
       .setName('Meeting Notes Folder')
       .setDesc('Where to store your meeting notes (e.g., "Meetings", "Work/Meetings")')
@@ -361,6 +413,11 @@ export class EnhancedSetupWizard extends Modal {
         .setValue(this.settings.targetFolder || 'Meetings')
         .onChange(value => {
           this.settings.targetFolder = value;
+          // Update preview when folder name changes
+          const preview = container.querySelector('.folder-preview') as HTMLElement;
+          if (preview) {
+            this.updateFolderPreview(preview);
+          }
         }));
     
     // Folder preview
@@ -374,10 +431,21 @@ export class EnhancedSetupWizard extends Modal {
     
     container.createEl('h4', { text: 'Preview:' });
     const tree = container.createDiv('folder-tree');
-    tree.createDiv({ text: '📁 Your Vault', cls: 'tree-root' });
-    tree.createDiv({ text: `  📁 ${folder}`, cls: 'tree-folder' });
-    tree.createDiv({ text: '    📄 2024-03-20 Team Meeting.md', cls: 'tree-file' });
-    tree.createDiv({ text: '    📄 2024-03-21 Client Call.md', cls: 'tree-file' });
+    
+    // Root vault folder
+    const vaultNode = tree.createDiv({ cls: 'tree-node tree-node-root' });
+    vaultNode.createSpan({ text: '📁 Your Vault', cls: 'tree-item' });
+    
+    // Meetings folder (indented)
+    const folderNode = tree.createDiv({ cls: 'tree-node tree-node-level-1' });
+    folderNode.createSpan({ text: `📁 ${folder}`, cls: 'tree-item tree-folder' });
+    
+    // Meeting files (double indented)
+    const file1Node = tree.createDiv({ cls: 'tree-node tree-node-level-2' });
+    file1Node.createSpan({ text: '📄 2024-03-20 Team Meeting.md', cls: 'tree-item tree-file' });
+    
+    const file2Node = tree.createDiv({ cls: 'tree-node tree-node-level-2' });
+    file2Node.createSpan({ text: '📄 2024-03-21 Client Call.md', cls: 'tree-item tree-file' });
   }
 
   private renderOrganizationStep(container: HTMLElement): void {
@@ -386,7 +454,7 @@ export class EnhancedSetupWizard extends Modal {
       .setDesc('How to organize meeting notes within your folder')
       .addDropdown(dropdown => dropdown
         .addOption('flat', '📄 All in one folder')
-        .addOption('by-date', '📅 Organized by date')
+        .addOption('by-date', '📅 Date-based subfolders')
         .addOption('mirror-granola', '🔄 Mirror Granola folders')
         .setValue(this.settings.folderOrganization || 'flat')
         .onChange(value => {
@@ -411,29 +479,69 @@ export class EnhancedSetupWizard extends Modal {
     const tree = preview.createDiv('folder-tree');
     const folder = this.settings.targetFolder || 'Meetings';
     
+    // Root vault folder
+    const vaultNode = tree.createDiv({ cls: 'tree-node tree-node-root' });
+    vaultNode.createSpan({ text: '📁 Your Vault', cls: 'tree-item' });
+    
     switch (this.settings.folderOrganization) {
       case 'by-date':
-        tree.createDiv({ text: `📁 ${folder}`, cls: 'tree-root' });
-        tree.createDiv({ text: '  📁 2024-03-20', cls: 'tree-folder' });
-        tree.createDiv({ text: '    📄 Team Meeting.md', cls: 'tree-file' });
-        tree.createDiv({ text: '    📄 Client Call.md', cls: 'tree-file' });
-        tree.createDiv({ text: '  📁 2024-03-21', cls: 'tree-folder' });
-        tree.createDiv({ text: '    📄 Project Review.md', cls: 'tree-file' });
+        // Meetings folder
+        const folderNode1 = tree.createDiv({ cls: 'tree-node tree-node-level-1' });
+        folderNode1.createSpan({ text: `📁 ${folder}`, cls: 'tree-item tree-folder' });
+        
+        // Date subfolder 1
+        const dateNode1 = tree.createDiv({ cls: 'tree-node tree-node-level-2' });
+        dateNode1.createSpan({ text: '📁 2024-03-20', cls: 'tree-item tree-folder' });
+        
+        // Files in date folder 1
+        const file1Node = tree.createDiv({ cls: 'tree-node tree-node-level-3' });
+        file1Node.createSpan({ text: '📄 Team Meeting.md', cls: 'tree-item tree-file' });
+        
+        const file2Node = tree.createDiv({ cls: 'tree-node tree-node-level-3' });
+        file2Node.createSpan({ text: '📄 Client Call.md', cls: 'tree-item tree-file' });
+        
+        // Date subfolder 2
+        const dateNode2 = tree.createDiv({ cls: 'tree-node tree-node-level-2' });
+        dateNode2.createSpan({ text: '📁 2024-03-21', cls: 'tree-item tree-folder' });
+        
+        const file3Node = tree.createDiv({ cls: 'tree-node tree-node-level-3' });
+        file3Node.createSpan({ text: '📄 Project Review.md', cls: 'tree-item tree-file' });
         break;
         
       case 'mirror-granola':
-        tree.createDiv({ text: `📁 ${folder}`, cls: 'tree-root' });
-        tree.createDiv({ text: '  📁 Work', cls: 'tree-folder' });
-        tree.createDiv({ text: '    📄 Team Meeting.md', cls: 'tree-file' });
-        tree.createDiv({ text: '  📁 Personal', cls: 'tree-folder' });
-        tree.createDiv({ text: '    📄 Doctor Appointment.md', cls: 'tree-file' });
+        // Meetings folder
+        const folderNode2 = tree.createDiv({ cls: 'tree-node tree-node-level-1' });
+        folderNode2.createSpan({ text: `📁 ${folder}`, cls: 'tree-item tree-folder' });
+        
+        // Work subfolder
+        const workNode = tree.createDiv({ cls: 'tree-node tree-node-level-2' });
+        workNode.createSpan({ text: '📁 Work', cls: 'tree-item tree-folder' });
+        
+        const workFile = tree.createDiv({ cls: 'tree-node tree-node-level-3' });
+        workFile.createSpan({ text: '📄 Team Meeting.md', cls: 'tree-item tree-file' });
+        
+        // Personal subfolder
+        const personalNode = tree.createDiv({ cls: 'tree-node tree-node-level-2' });
+        personalNode.createSpan({ text: '📁 Personal', cls: 'tree-item tree-folder' });
+        
+        const personalFile = tree.createDiv({ cls: 'tree-node tree-node-level-3' });
+        personalFile.createSpan({ text: '📄 Doctor Appointment.md', cls: 'tree-item tree-file' });
         break;
         
       default:
-        tree.createDiv({ text: `📁 ${folder}`, cls: 'tree-root' });
-        tree.createDiv({ text: '  📄 2024-03-20 Team Meeting.md', cls: 'tree-file' });
-        tree.createDiv({ text: '  📄 2024-03-21 Client Call.md', cls: 'tree-file' });
-        tree.createDiv({ text: '  📄 2024-03-22 Project Review.md', cls: 'tree-file' });
+        // Meetings folder
+        const folderNode3 = tree.createDiv({ cls: 'tree-node tree-node-level-1' });
+        folderNode3.createSpan({ text: `📁 ${folder}`, cls: 'tree-item tree-folder' });
+        
+        // Files directly in meetings folder
+        const flat1 = tree.createDiv({ cls: 'tree-node tree-node-level-2' });
+        flat1.createSpan({ text: '📄 2024-03-20 Team Meeting.md', cls: 'tree-item tree-file' });
+        
+        const flat2 = tree.createDiv({ cls: 'tree-node tree-node-level-2' });
+        flat2.createSpan({ text: '📄 2024-03-21 Client Call.md', cls: 'tree-item tree-file' });
+        
+        const flat3 = tree.createDiv({ cls: 'tree-node tree-node-level-2' });
+        flat3.createSpan({ text: '📄 2024-03-22 Project Review.md', cls: 'tree-item tree-file' });
     }
   }
 
@@ -504,22 +612,222 @@ export class EnhancedSetupWizard extends Modal {
       .replace('dd', day);
   }
 
-  private renderSyncSettingsStep(container: HTMLElement): void {
-    new Setting(container)
-      .setName('Automatic Sync')
-      .setDesc('Automatically sync meetings at regular intervals')
+  private renderTemplateSettingsStep(container: HTMLElement): void {
+    // Template Sync Options header
+    const header = container.createDiv('section-header');
+    header.createEl('h3', { text: 'Template Sync Options' });
+    header.createEl('p', { 
+      text: 'Choose how meeting templates are synced to your notes.',
+      cls: 'section-description' 
+    });
+    
+    // Button toggle group for template mode
+    const toggleSetting = new Setting(container)
+      .setName('')
+      .setDesc('');
+    
+    const toggleContainer = toggleSetting.controlEl.createDiv('button-toggle-group-inline');
+    
+    // Option 1: One template per meeting
+    const singleBtn = toggleContainer.createEl('button', {
+      text: 'Only Sync One Template Per Meeting',
+      cls: 'button-toggle'
+    });
+    if (this.templateSyncMode === 'single') {
+      singleBtn.addClass('active');
+    }
+    
+    singleBtn.addEventListener('click', () => {
+      this.templateSyncMode = 'single';
+      this.settings.templateFilterEnabled = false;
+      // Update button states
+      singleBtn.addClass('active');
+      allBtn.removeClass('active');
+      // Update explanation text
+      const explainText = container.querySelector('.template-explanation p');
+      if (explainText) {
+        explainText.textContent = 'Each meeting will use panels from its custom template if available, otherwise panels from the default template.';
+      }
+    });
+    
+    // Option 2: All templates
+    const allBtn = toggleContainer.createEl('button', {
+      text: 'Sync All Templates Applied to a Meeting',
+      cls: 'button-toggle'
+    });
+    if (this.templateSyncMode === 'all') {
+      allBtn.addClass('active');
+    }
+    
+    allBtn.addEventListener('click', () => {
+      this.templateSyncMode = 'all';
+      this.settings.templateFilterEnabled = true;
+      // Update button states
+      allBtn.addClass('active');
+      singleBtn.removeClass('active');
+      // Update explanation text
+      const explainText = container.querySelector('.template-explanation p');
+      if (explainText) {
+        explainText.textContent = 'Each meeting will include panels from all applied templates (custom templates first, then default template).';
+      }
+    });
+    
+    // Explanation based on selection
+    const explanation = container.createDiv('template-explanation');
+    if (this.templateSyncMode === 'single') {
+      explanation.createEl('p', {
+        text: 'Each meeting will use panels from its custom template if available, otherwise panels from the default template.',
+        cls: 'setting-item-description'
+      });
+    } else {
+      explanation.createEl('p', {
+        text: 'Each meeting will include panels from all applied templates (custom templates first, then default template).',
+        cls: 'setting-item-description'
+      });
+    }
+    
+    // Separator for custom template filter section
+    container.createEl('hr', { cls: 'settings-separator' });
+    
+    // Custom Template Sync Filter header
+    const filterHeader = container.createDiv('section-header');
+    filterHeader.createEl('h3', { text: 'Custom Template Sync Filter' });
+    
+    // Custom template filter toggle
+    const customTemplateSetting = new Setting(container)
+      .setName('Only sync meetings with custom template')
+      .setDesc('Skip meetings that don\'t have a custom template applied')
       .addToggle(toggle => toggle
-        .setValue(this.settings.autoSync ?? false)
+        .setValue(this.settings.onlyCustomTemplates ?? false)
         .onChange(value => {
-          this.settings.autoSync = value;
-          this.render(); // Re-render to show/hide interval setting
+          this.settings.onlyCustomTemplates = value;
+          // Show/hide template name filter
+          const templateNameSetting = container.querySelector('.template-name-filter-setting');
+          if (templateNameSetting) {
+            templateNameSetting.classList.toggle('hidden', !value);
+          }
         }));
     
-    if (this.settings.autoSync) {
-      new Setting(container)
-        .setName('Sync Interval')
-        .setDesc('How often to check for new meetings')
-        .addDropdown(dropdown => dropdown
+    // Custom template name filter (show when toggle is on)
+    const templateNameSetting = new Setting(container)
+      .setName('Filter by Template Name')
+      .setDesc('Only include panels from templates containing this name')
+      .addText(text => text
+        .setPlaceholder('My Custom Template')
+        .setValue(this.settings.templateFilterName || '')
+        .onChange(value => {
+          this.settings.templateFilterName = value;
+        }));
+    
+    // Add class for hiding/showing
+    templateNameSetting.settingEl.addClass('template-name-filter-setting');
+    if (!this.settings.onlyCustomTemplates) {
+      templateNameSetting.settingEl.addClass('hidden');
+    }
+  }
+
+  private renderTranscriptSettingsStep(container: HTMLElement): void {
+    new Setting(container)
+      .setName('Include Transcripts')
+      .setDesc('Add full meeting transcripts with speaker identification to your notes')
+      .addToggle(toggle => toggle
+        .setValue(this.settings.includeTranscripts ?? true)
+        .onChange(value => {
+          this.settings.includeTranscripts = value;
+        }));
+    
+    // Add example of transcript format
+    const example = container.createDiv('transcript-example');
+    example.createEl('h4', { text: 'Transcript Preview:' });
+    const preview = example.createDiv('transcript-preview');
+    preview.createEl('p', { text: '## Transcript', cls: 'transcript-heading' });
+    preview.createEl('p', { text: 'Me: Let\'s discuss the project timeline for next quarter.', cls: 'transcript-line' });
+    preview.createEl('p', { text: 'Them: I think we should focus on the MVP features first.', cls: 'transcript-line' });
+    preview.createEl('p', { text: 'Me: That makes sense. What are our key priorities?', cls: 'transcript-line' });
+    
+    // Add note about transcript processing
+    const note = container.createDiv('transcript-note');
+    note.createEl('p', { 
+      text: '💡 Transcripts are processed to identify speakers and remove duplicate segments for better readability.',
+      cls: 'setting-item-description'
+    });
+  }
+
+  private renderSyncSettingsStep(container: HTMLElement): void {
+    // Sync Mode header
+    const header = container.createDiv('section-header');
+    header.createEl('h3', { text: 'Sync Mode' });
+    header.createEl('p', { 
+      text: 'Choose how your meeting notes are synced.',
+      cls: 'section-description' 
+    });
+    
+    // Button toggle group for sync mode
+    const toggleSetting = new Setting(container)
+      .setName('')
+      .setDesc('');
+    
+    const toggleContainer = toggleSetting.controlEl.createDiv('button-toggle-group');
+    
+    // Manual sync button
+    const manualBtn = toggleContainer.createEl('button', {
+      text: 'Manual',
+      cls: 'button-toggle'
+    });
+    if (this.syncMode === 'manual') {
+      manualBtn.addClass('active');
+    }
+    
+    manualBtn.addEventListener('click', () => {
+      this.syncMode = 'manual';
+      this.settings.autoSync = false;
+      // Update buttons
+      manualBtn.addClass('active');
+      autoBtn.removeClass('active');
+      // Update dropdown state
+      const dropdown = container.querySelector('.sync-interval-dropdown select') as HTMLSelectElement;
+      if (dropdown) {
+        dropdown.disabled = true;
+      }
+    });
+    
+    // Automatic sync button
+    const autoBtn = toggleContainer.createEl('button', {
+      text: 'Automatic',
+      cls: 'button-toggle'
+    });
+    if (this.syncMode === 'automatic') {
+      autoBtn.addClass('active');
+    }
+    
+    autoBtn.addEventListener('click', () => {
+      this.syncMode = 'automatic';
+      this.settings.autoSync = true;
+      // Update buttons
+      autoBtn.addClass('active');
+      manualBtn.removeClass('active');
+      // Update dropdown state
+      const dropdown = container.querySelector('.sync-interval-dropdown select') as HTMLSelectElement;
+      if (dropdown) {
+        dropdown.disabled = false;
+      }
+    });
+    
+    // Explanation based on selection
+    const explanation = container.createDiv('sync-explanation');
+    explanation.createEl('p', {
+      text: this.syncMode === 'manual' 
+        ? 'You control when to sync your meeting notes.' 
+        : 'Meeting notes will be synced automatically at regular intervals.',
+      cls: 'setting-item-description'
+    });
+    
+    // Sync interval dropdown (always shown, disabled when manual)
+    const intervalSetting = new Setting(container)
+      .setName('Sync Interval')
+      .setDesc('How often to check for new meetings')
+      .addDropdown(dropdown => {
+        dropdown
           .addOption('300000', 'Every 5 minutes')
           .addOption('900000', 'Every 15 minutes')
           .addOption('1800000', 'Every 30 minutes')
@@ -527,8 +835,21 @@ export class EnhancedSetupWizard extends Modal {
           .setValue(String(this.settings.syncInterval || 900000))
           .onChange(value => {
             this.settings.syncInterval = parseInt(value);
-          }));
-    }
+          });
+        
+        // Set initial disabled state
+        dropdown.setDisabled(!this.settings.autoSync);
+        
+        // Add class for styling
+        dropdown.selectEl.parentElement?.addClass('sync-interval-dropdown');
+      });
+    
+    // Note about manual sync availability
+    const note = container.createDiv('sync-note');
+    note.createEl('p', { 
+      text: 'ℹ️ Manual sync is always available from the ribbon icon or command palette.',
+      cls: 'setting-item-description'
+    });
     
     new Setting(container)
       .setName('Show Sync Progress')
@@ -571,6 +892,34 @@ export class EnhancedSetupWizard extends Modal {
     settingsList.createEl('li', { 
       text: `✓ Organization: ${orgText[this.settings.folderOrganization || 'flat']}` 
     });
+    
+    // Template settings
+    if (this.settings.templateFilterEnabled) {
+      settingsList.createEl('li', { 
+        text: '✓ Including ALL template panels' 
+      });
+      if (this.settings.templateFilterName) {
+        settingsList.createEl('li', { 
+          text: `✓ Filtering templates by: "${this.settings.templateFilterName}"` 
+        });
+      }
+    } else {
+      settingsList.createEl('li', { 
+        text: '✓ One template only (custom or default)' 
+      });
+    }
+    
+    if (this.settings.onlyCustomTemplates) {
+      settingsList.createEl('li', { 
+        text: '✓ Only syncing meetings with custom templates' 
+      });
+    }
+    
+    if (this.settings.includeTranscripts) {
+      settingsList.createEl('li', { 
+        text: '✓ Including full transcripts' 
+      });
+    }
     
     if (this.settings.autoSync) {
       const interval = this.settings.syncInterval || 900000;
@@ -619,10 +968,14 @@ export class EnhancedSetupWizard extends Modal {
     // Merge settings with defaults
     const completeSettings: PluginSettings = {
       ...this.plugin.settings,
-      ...this.settings
+      ...this.settings,
+      wizardCompleted: true  // Mark wizard as completed
     } as PluginSettings;
     
+    // Close wizard first
     this.close();
+    
+    // Apply settings
     this.onComplete(completeSettings);
     
     // Log completion
@@ -634,6 +987,12 @@ export class EnhancedSetupWizard extends Modal {
         autoSync: completeSettings.autoSync
       }
     });
+    
+    // Trigger initial sync after a short delay to let settings apply
+    setTimeout(async () => {
+      new Notice('Starting initial sync...');
+      await this.plugin.performSync(true); // Force all meetings on first sync
+    }, 500);
   }
 
   onClose() {
@@ -642,7 +1001,17 @@ export class EnhancedSetupWizard extends Modal {
   }
 
   private updateNavigationButtons(): void {
-    // Re-render to update button states
-    this.render();
+    // Don't re-render the entire modal, just update the button states
+    const footer = this.contentEl.querySelector('.wizard-footer');
+    if (!footer) return;
+    
+    const nextButton = footer.querySelector('.mod-cta') as HTMLButtonElement;
+    if (nextButton) {
+      // Enable/disable based on current step validation
+      const step = this.steps[this.currentStep];
+      if (step.id === 'api-key' && this.settings.apiKey) {
+        nextButton.disabled = false;
+      }
+    }
   }
 }

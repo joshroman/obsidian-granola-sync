@@ -1,38 +1,34 @@
 import { App, Plugin, PluginManifest, Notice, EventRef } from 'obsidian';
-import { SyncStateManager } from './services/sync-state-manager';
-import { SyncEngine } from './services/sync-engine';
-import { OptimizedSyncEngine } from './services/optimized-sync-engine';
-import { EnhancedGranolaService } from './services/enhanced-granola-service';
-import { PathGenerator } from './utils/path-generator';
 import { DEFAULT_SETTINGS, PluginSettings } from './types';
 import { SettingsTab } from './ui/settings-tab';
 import { SyncProgressModal } from './ui/sync-modal';
 import { EnhancedSetupWizard } from './ui/enhanced-wizard-modal';
-import { TokenManager } from './services/token-manager';
+import { ServiceRegistry } from './services/service-registry';
 import { InputValidator } from './utils/input-validator';
-import { Logger } from './utils/logger';
-import { ErrorHandler } from './utils/error-handler';
+import { EnhancedGranolaService } from './services/enhanced-granola-service';
 import { StructuredLogger } from './utils/structured-logger';
 import { PerformanceMonitor } from './utils/performance-monitor';
 import { ErrorTracker } from './utils/error-tracker';
-import { PanelProcessor } from './services/panel-processor';
 
 export default class GranolaSyncPlugin extends Plugin {
   settings!: PluginSettings;
-  stateManager!: SyncStateManager;
-  syncEngine!: SyncEngine;
-  granolaService!: EnhancedGranolaService;
-  logger!: Logger;
-  errorHandler!: ErrorHandler;
-  tokenManager?: TokenManager;
-  performanceMonitor!: PerformanceMonitor;
-  errorTracker!: ErrorTracker;
-  structuredLogger!: StructuredLogger;
-  panelProcessor!: PanelProcessor;
+  private serviceRegistry!: ServiceRegistry;
   lastError: string = '';
   private syncInterval: number | null = null;
   private eventRefs: EventRef[] = [];
   private statusBarItem: HTMLElement | null = null;
+  
+  // Service accessor properties
+  get stateManager() { return this.serviceRegistry.get('stateManager')!; }
+  get syncEngine() { return this.serviceRegistry.get('syncEngine')!; }
+  get granolaService() { return this.serviceRegistry.get('granolaService')!; }
+  get logger() { return this.serviceRegistry.get('logger')!; }
+  get errorHandler() { return this.serviceRegistry.get('errorHandler')!; }
+  get tokenManager() { return this.serviceRegistry.get('tokenManager'); }
+  get performanceMonitor() { return this.serviceRegistry.get('performanceMonitor')!; }
+  get errorTracker() { return this.serviceRegistry.get('errorTracker')!; }
+  get structuredLogger() { return this.serviceRegistry.get('structuredLogger')!; }
+  get panelProcessor() { return this.serviceRegistry.get('panelProcessor')!; }
   
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
@@ -41,52 +37,12 @@ export default class GranolaSyncPlugin extends Plugin {
   async onload() {
     console.log('Loading Granola Sync plugin');
     
-    // Initialize logger and error handler
-    this.logger = new Logger(this);
-    this.errorHandler = new ErrorHandler(this.logger);
-    
-    // Initialize shared structured logger and panel processor
-    this.structuredLogger = new StructuredLogger('GranolaSync', this);
-    this.panelProcessor = new PanelProcessor(this.structuredLogger);
-    
     // Load settings
     await this.loadSettings();
     
-    // Initialize state manager
-    this.stateManager = new SyncStateManager(this);
-    await this.stateManager.initialize();
-    
-    // Try to initialize token manager if consent was given
-    if (this.settings.granolaConsentGiven && !this.settings.useManualToken) {
-      this.tokenManager = new TokenManager(this, this.logger);
-      await this.tokenManager.initialize();
-    }
-    
-    // Initialize monitoring services
-    this.performanceMonitor = new PerformanceMonitor(new StructuredLogger('PerformanceMonitor', this));
-    this.errorTracker = new ErrorTracker(new StructuredLogger('ErrorTracker', this));
-    
-    // Initialize services with proper API key
-    const apiKey = this.tokenManager?.getAccessToken() || this.settings.apiKey || '';
-    const granolaVersion = this.tokenManager?.getGranolaVersion() || undefined;
-    
-    this.granolaService = new EnhancedGranolaService(
-      { 
-        apiKey,
-        granolaVersion
-      },
-      new StructuredLogger('GranolaService', this),
-      this.performanceMonitor,
-      this.errorTracker
-    );
-    const pathGenerator = new PathGenerator(() => this.settings);
-    this.syncEngine = new SyncEngine(
-      this.stateManager, 
-      this.granolaService, 
-      pathGenerator,
-      this,
-      this.logger
-    );
+    // Initialize service registry
+    this.serviceRegistry = new ServiceRegistry(this);
+    await this.serviceRegistry.initialize(this.settings);
     
     // Add settings tab
     this.addSettingTab(new SettingsTab(this.app, this));
@@ -148,10 +104,9 @@ export default class GranolaSyncPlugin extends Plugin {
     this.statusBarItem = this.addStatusBarItem();
     this.updateStatusBar();
     
-    // Show setup wizard if no authentication configured
-    const hasAuth = this.tokenManager?.hasTokens() || this.settings.apiKey;
-    if (!hasAuth && !this.settings.granolaConsentGiven && !this.settings.useManualToken) {
-      // First time user - show wizard
+    // Show setup wizard if not completed
+    if (!this.settings.wizardCompleted) {
+      // Show wizard for initial setup or incomplete setup
       this.showSetupWizard();
     }
     
@@ -160,22 +115,18 @@ export default class GranolaSyncPlugin extends Plugin {
       this.startAutoSync();
     }
     
-    this.logger.info('Granola Sync plugin loaded');
+    if (this.logger) {
+      this.logger.info('Granola Sync plugin loaded');
+    }
   }
 
   async onunload() {
     console.log('Unloading Granola Sync plugin');
     
-    // Cancel any ongoing sync
-    this.syncEngine?.cancelSync();
-    
     // Clear auto-sync interval
     if (this.syncInterval !== null) {
       window.clearInterval(this.syncInterval);
     }
-    
-    // Cleanup state manager
-    this.stateManager?.cleanup();
     
     // Unregister all events
     this.eventRefs.forEach(ref => this.app.workspace.offref(ref));
@@ -185,7 +136,10 @@ export default class GranolaSyncPlugin extends Plugin {
       this.statusBarItem.remove();
     }
     
-    this.logger.info('Granola Sync plugin unloaded');
+    // Clean up all services through registry
+    await this.serviceRegistry?.cleanup();
+    
+    console.log('Granola Sync plugin unloaded');
   }
   
   async loadSettings() {
@@ -195,34 +149,11 @@ export default class GranolaSyncPlugin extends Plugin {
   async saveSettings() {
     await this.saveData(this.settings);
     
-    // Update services with new settings
-    if (this.granolaService) {
-      // Recreate service with new settings
-      const apiKey = this.tokenManager?.getAccessToken() || this.settings.apiKey || '';
-      const granolaVersion = this.tokenManager?.getGranolaVersion() || undefined;
-      
-      this.granolaService = new EnhancedGranolaService(
-        { 
-          apiKey,
-          granolaVersion
-        },
-        new StructuredLogger('GranolaService', this),
-        this.performanceMonitor,
-        this.errorTracker
-      );
-      
-      // Update sync engine with new service
-      const pathGenerator = new PathGenerator(() => this.settings);
-      this.syncEngine = new SyncEngine(
-        this.stateManager, 
-        this.granolaService, 
-        pathGenerator, 
-        this
-      );
-    }
+    // Update service configurations through registry
+    await this.serviceRegistry.updateConfiguration(this.settings);
     
     // Restart auto-sync if needed
-    if (this.settings.syncAutomatically) {
+    if (this.settings.autoSync) {
       this.startAutoSync();
     } else {
       this.stopAutoSync();
@@ -341,8 +272,8 @@ export default class GranolaSyncPlugin extends Plugin {
   
   showSetupWizard(): EnhancedSetupWizard {
     const wizard = new EnhancedSetupWizard(this.app, this, async (settings) => {
-      this.settings = settings;
-      await this.saveSettings();
+      // Update settings through proper handler to ensure services are updated
+      await this.updateSettings(settings);
       new Notice('Setup complete! You can now sync your meetings.');
     });
     wizard.open();
@@ -350,7 +281,9 @@ export default class GranolaSyncPlugin extends Plugin {
   }
   
   async resetSyncState() {
-    this.logger.info('Resetting sync state...');
+    if (this.logger) {
+      this.logger.info('Resetting sync state...');
+    }
     
     // Clear the state manager
     await this.stateManager.clearState();
@@ -359,29 +292,37 @@ export default class GranolaSyncPlugin extends Plugin {
     this.settings.lastSync = '';
     await this.saveSettings();
     
-    this.logger.info('Sync state reset complete');
+    if (this.logger) {
+      this.logger.info('Sync state reset complete');
+    }
     this.updateStatusBar();
   }
   
   private startAutoSync() {
     this.stopAutoSync();
     
-    // Sync every 30 minutes
-    const interval = 30 * 60 * 1000;
+    // Use interval from settings, default to 15 minutes
+    const interval = this.settings.syncInterval || 900000;
     
     this.syncInterval = window.setInterval(async () => {
-      this.logger.info('Starting automatic sync');
+      if (this.logger) {
+        this.logger.info('Starting automatic sync');
+      }
       await this.performSync();
     }, interval);
     
-    this.logger.info('Automatic sync enabled');
+    if (this.logger) {
+      this.logger.info(`Automatic sync enabled (interval: ${interval}ms)`);
+    }
   }
   
   private stopAutoSync() {
     if (this.syncInterval !== null) {
       window.clearInterval(this.syncInterval);
       this.syncInterval = null;
-      this.logger.info('Automatic sync disabled');
+      if (this.logger) {
+        this.logger.info('Automatic sync disabled');
+      }
     }
   }
   

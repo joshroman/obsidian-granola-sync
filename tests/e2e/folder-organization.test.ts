@@ -306,7 +306,7 @@ describe('Folder Organization E2E Tests', () => {
         ...DEFAULT_SETTINGS,
         apiKey: 'test-key',
         targetFolder: 'Meetings',
-        fileNamingFormat: 'meeting-name',
+        includeDateInFilename: false,  // This makes it use meeting name only
         folderOrganization: 'flat'
       };
 
@@ -396,9 +396,8 @@ describe('Folder Organization E2E Tests', () => {
         expect.any(String)
       );
 
-      // Force state manager to track the file
-      const stateManager = (plugin as any).stateManager;
-      stateManager.addFile('1', 'Meetings/2024-03-20 Team Meeting.md');
+      // The file should already be tracked by the state manager after sync
+      // No need to manually add it - it was added during the sync process
 
       // Change to by-date organization
       plugin.settings.folderOrganization = 'by-date';

@@ -128,17 +128,23 @@ export class Modal {
     
     // Add Obsidian-specific class methods
     (el as any).addClass = (cls: string) => {
-      el.classList.add(cls);
+      if (el.classList) {
+        el.classList.add(cls);
+      }
       return el;
     };
     
     (el as any).removeClass = (cls: string) => {
-      el.classList.remove(cls);
+      if (el.classList) {
+        el.classList.remove(cls);
+      }
       return el;
     };
     
     (el as any).toggleClass = (cls: string, force?: boolean) => {
-      el.classList.toggle(cls, force);
+      if (el.classList) {
+        el.classList.toggle(cls, force);
+      }
       return el;
     };
     
@@ -228,17 +234,23 @@ export class PluginSettingTab {
     
     // Add Obsidian-specific class methods
     (el as any).addClass = (cls: string) => {
-      el.classList.add(cls);
+      if (el.classList) {
+        el.classList.add(cls);
+      }
       return el;
     };
     
     (el as any).removeClass = (cls: string) => {
-      el.classList.remove(cls);
+      if (el.classList) {
+        el.classList.remove(cls);
+      }
       return el;
     };
     
     (el as any).toggleClass = (cls: string, force?: boolean) => {
-      el.classList.toggle(cls, force);
+      if (el.classList) {
+        el.classList.toggle(cls, force);
+      }
       return el;
     };
     
@@ -341,3 +353,82 @@ export class ProgressBarComponent {
 
 // Mock EventRef
 export interface EventRef {}
+
+// Mock requestUrl function
+export const requestUrl = jest.fn().mockImplementation(async (options: any) => {
+  console.log('Mock requestUrl called with:', options.url);
+  
+  // Mock successful responses for different endpoints
+  if (options.url.includes('/meetings')) {
+    return {
+      status: 200,
+      headers: {
+        'content-type': 'application/json',
+        'content-encoding': 'gzip'
+      },
+      json: {
+        documents: [
+          {
+            id: 'test-meeting-123',
+            title: 'Test Meeting',
+            created_at: '2024-03-20T10:00:00Z',
+            updated_at: '2024-03-20T10:00:00Z',
+            plaintext: 'Test meeting content'
+          }
+        ]
+      },
+      text: JSON.stringify({
+        documents: [
+          {
+            id: 'test-meeting-123',
+            title: 'Test Meeting',
+            created_at: '2024-03-20T10:00:00Z',
+            updated_at: '2024-03-20T10:00:00Z',
+            plaintext: 'Test meeting content'
+          }
+        ]
+      })
+    };
+  }
+  
+  // Handle /v2/get-documents endpoint
+  if (options.url.includes('/v2/get-documents')) {
+    return {
+      status: 200,
+      headers: {
+        'content-type': 'application/json'
+      },
+      json: {
+        docs: [],
+        next_cursor: null
+      },
+      text: JSON.stringify({
+        docs: [],
+        next_cursor: null
+      })
+    };
+  }
+  
+  if (options.url.includes('/get-document-panels')) {
+    return {
+      status: 200,
+      headers: {
+        'content-type': 'application/json'
+      },
+      json: {
+        panels: []
+      },
+      text: JSON.stringify({ panels: [] })
+    };
+  }
+  
+  // Default response
+  return {
+    status: 200,
+    headers: {
+      'content-type': 'application/json'
+    },
+    json: {},
+    text: '{}'
+  };
+});

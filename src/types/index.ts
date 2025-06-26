@@ -12,6 +12,8 @@ export interface Meeting {
   attachments?: Attachment[];
   panels?: DocumentPanel[];
   panelSections?: Record<string, string>; // Structured content from panels
+  endTime?: Date; // When the meeting ended
+  updatedAt?: Date; // Last update time from Granola
 }
 
 export interface Attachment {
@@ -89,6 +91,15 @@ export interface PluginSettings {
   // Debug options
   debugMode: boolean;
   logLevel: 'error' | 'warn' | 'info' | 'debug';
+  
+  // Wizard completion tracking
+  wizardCompleted: boolean;
+  
+  // Template filtering
+  templateFilterEnabled: boolean;
+  templateFilterName: string;
+  onlyCustomTemplates: boolean; // Only sync meetings with custom templates
+  includeTranscripts: boolean;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -109,6 +120,11 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   useManualToken: false,
   debugMode: false,
   logLevel: 'error',
+  wizardCompleted: false,
+  templateFilterEnabled: false,
+  templateFilterName: '',
+  onlyCustomTemplates: false,
+  includeTranscripts: true
 };
 
 export interface DocumentPanel {
@@ -128,6 +144,14 @@ export interface DocumentPanel {
 
 export interface DocumentPanelsResponse {
   panels: DocumentPanel[];
+}
+
+export interface TranscriptSegment {
+  text?: string;
+  start_timestamp?: string;
+  end_timestamp?: string;
+  source?: string; // "microphone" or "system"
+  document_id?: string;
 }
 
 export interface PanelSection {

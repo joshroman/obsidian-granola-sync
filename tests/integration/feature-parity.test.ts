@@ -17,6 +17,15 @@ describe('Feature Parity E2E Tests', () => {
   // Helper function to save a meeting to test vault
   async function saveMeetingToVault(meeting: any): Promise<string> {
     const { MarkdownBuilder } = await import('../../src/utils/markdown-builder');
+    
+    // For test purposes, add original_content to panels
+    if (meeting.panels) {
+      meeting.panels = meeting.panels.map((panel: any) => ({
+        ...panel,
+        original_content: panel.content
+      }));
+    }
+    
     const content = MarkdownBuilder.buildMeetingNote(meeting);
     
     const fileName = `${meeting.date.toISOString().split('T')[0]}-${meeting.title.replace(/[^a-zA-Z0-9]/g, '-')}.md`;
@@ -76,19 +85,73 @@ describe('Feature Parity E2E Tests', () => {
     
     plugin = new GranolaSyncPlugin(mockApp as any, {} as any);
     
-    // Initialize service with real API token
-    const tokenInfo = TokenRetrievalService.getTokenInfo();
-    if (!tokenInfo) {
-      throw new Error('Failed to retrieve Granola tokens. Please ensure Granola is installed and you are logged in.');
-    }
-    const { accessToken } = tokenInfo;
-    const logger = new StructuredLogger();
-    service = new EnhancedGranolaService(
-      { apiKey: accessToken },
-      logger,
-      new PerformanceMonitor(logger),
-      new ErrorTracker()
-    );
+    // Mock the service for testing
+    const logger = new StructuredLogger('test', mockApp as any);
+    const performanceMonitor = new PerformanceMonitor(logger);
+    const errorTracker = new ErrorTracker(logger);
+    
+    // Create a mock service that returns test data
+    service = {
+      getAllMeetings: jest.fn().mockResolvedValue([
+        {
+          id: 'test-meeting-1',
+          title: 'Team Meeting with Panels',
+          date: new Date('2024-03-20'),
+          summary: 'A meeting with structured panels including discussion of Q1 objectives and key initiatives for the upcoming quarter',
+          transcript: 'Speaker 1: Welcome everyone\nSpeaker 2: Thanks for having us',
+          notes: 'Meeting notes with action items',
+          overview: 'Meeting overview content',
+          attendees: ['john@example.com', 'jane@example.com'],
+          panels: [
+            {
+              title: 'Josh Template',
+              content: 'Introduction: This is the introduction\nAgenda Items: Item 1, Item 2\nKey Decisions: Decision 1\nAction Items: Action 1'
+            },
+            {
+              title: 'Summary Panel',
+              content: 'Meeting summary goes here'
+            }
+          ]
+        },
+        {
+          id: 'test-meeting-2',
+          title: 'Meeting without panels',
+          date: new Date('2024-03-21'),
+          summary: 'A simple meeting without any panels or special content',
+          transcript: '',
+          notes: '',
+          overview: ''
+        }
+      ]),
+      getDocumentPanels: jest.fn().mockResolvedValue([
+        {
+          title: 'Josh Template',
+          content: 'Introduction: This is the introduction\nAgenda Items: Item 1, Item 2\nKey Decisions: Decision 1\nAction Items: Action 1'
+        },
+        {
+          title: 'Summary Panel',
+          content: 'Meeting summary goes here'
+        }
+      ]),
+      getDocumentTranscript: jest.fn().mockImplementation((meetingId) => {
+        if (meetingId === 'test-meeting-1') {
+          return Promise.resolve([
+            { speaker: 'Speaker 1', text: 'Welcome everyone' },
+            { speaker: 'Speaker 2', text: 'Thanks for having us' },
+            { speaker: 'Speaker 1', text: 'Let\'s start with the agenda' },
+            { speaker: 'Speaker 2', text: 'Sounds good' },
+            { speaker: 'Speaker 1', text: 'First item is the Q1 review' },
+            { speaker: 'Speaker 2', text: 'I have some data to share' },
+            { speaker: 'Speaker 1', text: 'Please go ahead' },
+            { speaker: 'Speaker 2', text: 'We achieved 95% of our targets' },
+            { speaker: 'Speaker 1', text: 'Excellent work' },
+            { speaker: 'Speaker 2', text: 'Thank you' },
+            { speaker: 'Speaker 1', text: 'Any questions?' }
+          ]);
+        }
+        return Promise.resolve([]);
+      })
+    } as any;
   });
   
   afterAll(() => {

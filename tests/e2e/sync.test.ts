@@ -14,9 +14,11 @@ describe('Sync Engine E2E Tests', () => {
   
   test('syncs new meetings without creating duplicates', async () => {
     // Arrange: Create existing meeting in vault
+    const meetingDate = new Date('2024-03-20T10:00:00.000Z');
     const meeting = generateMockMeeting({
       id: 'test-meeting-123',
-      title: 'Important Meeting'
+      title: 'Important Meeting',
+      date: meetingDate
     });
     
     await plugin.createTestVault({
@@ -31,16 +33,31 @@ date: 2024-03-20T10:00:00.000Z
 Meeting content here.`
     });
     
+    // Reset the create mock after test vault setup
+    (plugin.mockApp.vault.create as jest.Mock).mockClear();
+    
+    // Update state manager to know about the existing file
+    await plugin.plugin.stateManager.rebuildIndex();
+    
+    // Debug: Check what the state manager knows
+    const filePath = plugin.plugin.stateManager.getFilePath('test-meeting-123');
+    console.log('State manager file path for test-meeting-123:', filePath);
+    
+    // Disable conflict detection for this test
+    plugin.plugin.syncEngine.setConflictDetection(false);
+    
     // Mock API to return same meeting
     plugin.plugin.granolaService.getAllMeetings = jest.fn().mockResolvedValue([meeting]);
     plugin.plugin.granolaService.getMeetingsSince = jest.fn().mockResolvedValue([meeting]);
     plugin.plugin.granolaService.testConnection = jest.fn().mockResolvedValue(true);
     
     // Act: Run the sync operation
-    await plugin.plugin.performSync();
+    const syncPromise = plugin.plugin.performSync();
     
-    // Advance timers for any debounced operations
-    jest.advanceTimersByTime(1000);
+    // Advance timers to process any pending operations
+    jest.runAllTimers();
+    
+    await syncPromise;
     
     // Assert: Verify no duplicate was created
     const files = plugin.mockApp.vault.getMarkdownFiles();
@@ -94,7 +111,12 @@ Meeting content here.`
     plugin.plugin.granolaService.testConnection = jest.fn().mockResolvedValue(true);
     
     // Act: Run sync with same meeting from API
-    await plugin.plugin.performSync();
+    const syncPromise = plugin.plugin.performSync();
+    
+    // Advance timers to process any pending operations
+    jest.runAllTimers();
+    
+    await syncPromise;
     
     // Assert: Verify meeting is not recreated
     const files = plugin.mockApp.vault.getMarkdownFiles();

@@ -44,15 +44,12 @@ export class PathGenerator {
     const settings = this.getSettings();
     const sanitizedTitle = InputValidator.validateMeetingTitle(meeting.title);
     
-    switch (settings.fileNamingFormat) {
-      case 'date-meeting-name':
-        // Use UTC to ensure consistent dates across timezones
-        const datePrefix = this.formatDateUTC(meeting.date, settings.dateFormat);
-        return `${datePrefix} ${sanitizedTitle}.md`;
-        
-      case 'meeting-name':
-      default:
-        return `${sanitizedTitle}.md`;
+    if (settings.includeDateInFilename) {
+      // Use UTC to ensure consistent dates across timezones
+      const datePrefix = this.formatDateUTC(meeting.date, settings.dateFormat);
+      return `${datePrefix} ${sanitizedTitle}.md`;
+    } else {
+      return `${sanitizedTitle}.md`;
     }
   }
   

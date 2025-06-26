@@ -1,153 +1,138 @@
 # TODO.md - Obsidian Granola Sync Plugin
 
-## Current Phase: Phase 8 - Conflict Resolution
+## Current Focus: Consolidation Sprint
 
-### Phase 8 Tasks (In Progress)
+Based on expert consensus from o3, Gemini 2.5 Pro, and o3-mini, we are executing a focused consolidation sprint before adding any new features.
 
-#### Day 1: Foundation
-- [ ] Extend SyncState interface with FileMetadata
-  - [ ] Add contentHash, lastModifiedAt, syncVersion fields
-  - [ ] Add stateChecksum for integrity validation
-- [ ] Implement content hashing utility
-  - [ ] Use crypto.subtle API for SHA-256
-  - [ ] Hash frontmatter + key sections only
-  - [ ] Add hash caching mechanism
-- [ ] Add modification tracking
-  - [ ] Listen to vault 'modify' events
-  - [ ] Compare mtime with lastSyncedAt
-  - [ ] Track user vs sync modifications
-- [ ] Begin conflict detection engine
-  - [ ] Define ConflictType enum
-  - [ ] Create ConflictInfo interface
-  - [ ] Implement basic detection logic
+### Consolidation Sprint Tasks (3-4 weeks)
 
-#### Day 2: Core Logic
-- [ ] Complete conflict detection
-  - [ ] Handle all conflict types
-  - [ ] Add duplicate ID detection
-  - [ ] Validate file metadata
-- [ ] Implement resolution strategies
-  - [ ] Define ConflictResolution enum
-  - [ ] Create ConflictResolver class
-  - [ ] Implement each resolution strategy
-- [ ] Add merge capabilities
-  - [ ] Smart merge for content conflicts
-  - [ ] Preserve user body content
-  - [ ] Update metadata from Granola
-- [ ] Create validation framework
-  - [ ] StateValidator for sync state
-  - [ ] MeetingValidator for data integrity
-  - [ ] Recovery suggestions
+#### Week 1: Analysis & Planning
+- [ ] Create component inventory matrix
+  - [ ] List all sync engine implementations
+  - [ ] List all state manager implementations  
+  - [ ] Identify overlapping functionality
+  - [ ] Document unique features in each
+- [ ] Select canonical implementations
+  - [ ] Choose primary sync engine (likely hardened-sync-engine.ts)
+  - [ ] Choose primary state manager
+  - [ ] Document rationale for choices
+- [ ] Fix failing tests
+  - [ ] Address timezone issues
+  - [ ] Fix async race conditions
+  - [ ] Resolve mock initialization problems
+  - [ ] Achieve 100% test pass rate
 
-#### Day 3: Polish & Recovery
-- [ ] Transaction system
-  - [ ] Create StateTransaction class
-  - [ ] Add rollback capabilities
-  - [ ] Ensure atomic operations
-- [ ] State recovery mechanisms
-  - [ ] Implement StateRecovery class
-  - [ ] Multiple recovery strategies
-  - [ ] Backup/restore functionality
-- [ ] Conflict UI components
-  - [ ] ConflictResolutionModal
-  - [ ] Diff visualization
-  - [ ] Batch resolution options
-- [ ] Comprehensive testing
-  - [ ] Unit tests for each component
-  - [ ] Integration tests
-  - [ ] E2E conflict scenarios
+#### Week 2: Consolidation
+- [ ] Merge missing features into canonical engine
+  - [ ] Review each deprecated engine for unique logic
+  - [ ] Port essential features to canonical version
+  - [ ] Ensure no functionality is lost
+- [ ] Delete redundant implementations
+  - [ ] Remove deprecated sync engines
+  - [ ] Remove deprecated state managers
+  - [ ] Update all imports to use canonical versions
+- [ ] Update documentation
+  - [ ] Mark canonical files clearly
+  - [ ] Add deprecation notices
+  - [ ] Update architecture diagrams
 
-### Upcoming Phases
+#### Week 3: Validation & Quality
+- [ ] Test all Phase 2 requirements thoroughly
+  - [ ] API integration with authentication
+  - [ ] All three path generation modes (flat, by-date, mirror-granola)
+  - [ ] Conflict resolution scenarios
+  - [ ] Idempotent sync operations
+- [ ] Performance validation
+  - [ ] Test with 1000+ meetings
+  - [ ] Memory usage profiling
+  - [ ] Sync time benchmarks
+- [ ] Security audit
+  - [ ] API key storage verification
+  - [ ] Input validation testing
+  - [ ] Error message sanitization
 
-#### Phase 9: Observability & Performance (Next)
-- Structured logging with Winston/Pino
-- Performance optimization with p-queue
-- Memory usage monitoring
-- Circuit breaker pattern
+#### Week 4: Quality Gates & Documentation
+- [ ] Establish CI/CD quality gates
+  - [ ] 100% test pass requirement
+  - [ ] Code coverage thresholds
+  - [ ] Linting enforcement
+  - [ ] Type checking strictness
+- [ ] Update all documentation
+  - [ ] Synchronize phase numbering
+  - [ ] Document canonical architecture
+  - [ ] Create migration guide
+- [ ] Prepare for beta testing
+  - [ ] Create test plan
+  - [ ] Set up feedback channels
+  - [ ] Document known limitations
 
-#### Phase 10: Core Engine Hardening
-- AbortController for cancellation
-- Progress persistence
-- State machine implementation
-- Network resilience
+## Completed Phases (v1.0)
 
-#### Phase 11: User Experience Polish
-- Interactive wizard improvements
-- Real-time progress with ETA
-- Pause/resume capability
-- Guided troubleshooting
+### Core Development
+✅ **Phase 0**: Proof of Concept
+✅ **Phase 0.5**: Critical Infrastructure & Junior Dev Setup
+✅ **Phase 1**: Foundation & Testing Framework
+✅ **Phase 2**: Core Sync Engine
+✅ **Phase 3**: Performance & Error Handling
+✅ **Phase 4**: UI/UX Polish
+✅ **Phase 5**: Testing & Edge Cases
+✅ **Phase 6**: Test Rehabilitation
 
-#### Phase 12: Documentation & Release
-- Comprehensive README
-- API documentation
-- Video tutorials
-- Community submission prep
+### Extended Development
+✅ **Phase 7**: Test Infrastructure & CI/CD
+✅ **Phase 8**: Conflict Resolution
+✅ **Phase 9**: Logging & Performance
+✅ **Phase 10**: Sync Engine Hardening
+✅ **Phase 11**: Enhanced UI/UX
+✅ **Phase 12**: Documentation & Release
 
-## Recently Completed
+### Version 2.0 Features
+✅ **Phase 13** (formerly duplicate Phase 1): Panel/Template Support
 
-### Phase 7: Test Infrastructure ✅
-- Fixed timezone issues across tests
-- Reduced test failures from 57 to 4
-- Achieved 74/108 tests passing
-- Identified clustering strategy for remaining failures
+## Post-Consolidation Roadmap
 
-### Phase 6: Test Rehabilitation ✅
-- Implemented test clustering strategy
-- 22% failure reduction achieved
-- Grouped related test failures
+### Version 1.0 Release
+1. Beta testing with community
+2. Bug fixes from beta feedback
+3. Performance optimization
+4. Official submission to Obsidian Community Plugins
 
-### Phase 5: Testing & Edge Cases ✅
-- Added comprehensive test coverage
-- Special character handling
-- Timezone edge cases
-- Large dataset tests
+### Version 2.0 Planning
+1. Two-way sync capabilities
+2. Selective sync filters
+3. Custom template system
+4. Bulk operations
+5. Enhanced search integration
 
-### Phase 4: UI/UX Polish ✅
-- Setup wizard implementation
-- Sync progress modal
-- Settings improvements
-- Status bar integration
+## Technical Debt to Address
 
-### Phase 3: Performance & Error Handling ✅
-- Retry logic with exponential backoff
-- Streaming for large datasets
-- Comprehensive error handling
-- Batch processing optimization
-
-### Phase 2: Core Sync Functionality ✅
-- API integration
-- File creation/updates
-- Path generation
-- Basic authentication
-
-### Phase 1: Foundation & Testing Framework ✅
-- Project structure
-- TypeScript setup
-- Testing framework
-- Core types
-
-### Phase 0.5: Critical Infrastructure ✅
-- State management system
-- Input validation
-- Test environment setup
-- Performance groundwork
-
-### Phase 0: Proof of Concept ✅
-- Basic plugin structure
-- Minimal working plugin
-- Development workflow
-
-## Notes
-
-- Current test status: 4 failed, 30 skipped, 74 passed (108 total)
-- Main failing tests are in special-characters.test.ts and edge-cases.test.ts
-- Performance tests show good results with adaptive batch sizing
-- State management is functional but needs conflict resolution enhancements
+1. **Multiple Sync Engines**: 4 different implementations need consolidation
+2. **Failing Tests**: Some tests still failing, blocking CI/CD
+3. **Documentation Sync**: Phase numbering confusion needs resolution
+4. **Code Organization**: Redundant implementations scattered across files
 
 ## Development Guidelines
 
-1. Always run tests before committing: `npm test`
-2. Update this TODO.md as tasks are completed
-3. Follow atomic commit practices
-4. Use feature branches for major changes
-5. Get AI review before phase completion
+1. **NO NEW FEATURES** until consolidation is complete
+2. All changes must maintain 100% test pass rate
+3. Document which files are canonical
+4. Use atomic commits with clear messages
+5. Get expert review before major decisions
+
+## Success Criteria for Consolidation
+
+- ✅ Single sync engine implementation (all others deleted)
+- ✅ Single state manager implementation (all others deleted)
+- ✅ 100% test pass rate with no skipped tests
+- ✅ All Phase 2 requirements verified working
+- ✅ Clear documentation of canonical implementations
+- ✅ CI/CD pipeline with enforced quality gates
+- ✅ Performance benchmarks established
+- ✅ Security audit completed
+
+## Notes
+
+- Current test status: Multiple failures need addressing
+- Primary goal: Stability over features
+- Timeline: 3-4 weeks of focused effort
+- Approach: Consolidate, don't rewrite from scratch

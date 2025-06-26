@@ -44,6 +44,21 @@ export class EnhancedGranolaService {
     };
   }
 
+  /**
+   * Update service configuration without recreating the instance
+   * Prevents memory leaks from service recreation
+   */
+  updateConfig(newConfig: Partial<APIConfig>): void {
+    this.config = {
+      ...this.config,
+      ...newConfig
+    };
+    this.logger.info('Updated Granola service configuration', {
+      hasApiKey: !!this.config.apiKey,
+      granolaVersion: this.config.granolaVersion
+    });
+  }
+
   async testConnection(): Promise<boolean> {
     const operationId = this.performanceMonitor.startOperation('test-connection');
     
@@ -229,6 +244,7 @@ export class EnhancedGranolaService {
         try {
           this.logger.debug('Fetching panels for document', { documentId });
           
+          // Follow the exact same pattern as granola-automation-client
           const response = await this.makeRequest('/v1/get-document-panels', {
             method: 'POST',
             body: { document_id: documentId }
@@ -236,11 +252,21 @@ export class EnhancedGranolaService {
           
           console.log('[Granola Plugin Debug] Panels response:', {
             hasData: !!response,
+            responseType: typeof response,
+            isArray: Array.isArray(response),
             hasPanels: !!(response && response.panels),
-            panelsLength: response?.panels?.length || 0
+            panelsLength: response?.panels?.length || Array.isArray(response) ? response.length : 0
           });
           
-          if (response && response.panels && Array.isArray(response.panels)) {
+          // The API might return the panels array directly or wrapped in an object
+          if (Array.isArray(response)) {
+            this.logger.info('Retrieved panels array for document', { 
+              documentId, 
+              panelCount: response.length,
+              panelTitles: response.map((p: DocumentPanel) => p.title)
+            });
+            return response;
+          } else if (response && response.panels && Array.isArray(response.panels)) {
             this.logger.info('Retrieved panels for document', { 
               documentId, 
               panelCount: response.panels.length,
@@ -260,6 +286,48 @@ export class EnhancedGranolaService {
             'fetch-document-panels',
             { documentId }
           );
+          // Return empty array on failure - graceful degradation
+          return [];
+        }
+      },
+      { documentId }
+    );
+  }
+
+  async getDocumentTranscript(documentId: string): Promise<TranscriptSegment[]> {
+    return this.performanceMonitor.measureAsync(
+      'fetch-document-transcript',
+      async () => {
+        try {
+          this.logger.debug('Fetching transcript for document', { documentId });
+          
+          // Follow the exact same pattern as granola-automation-client
+          const response = await this.makeRequest('/v1/get-document-transcript', {
+            method: 'POST',
+            body: { document_id: documentId }
+          });
+          
+          console.log('[Granola Plugin Debug] Transcript response:', {
+            hasData: !!response,
+            isArray: Array.isArray(response),
+            segmentCount: Array.isArray(response) ? response.length : 0
+          });
+          
+          if (Array.isArray(response)) {
+            this.logger.info('Retrieved transcript segments for document', { 
+              documentId, 
+              segmentCount: response.length
+            });
+            return response as TranscriptSegment[];
+          }
+          
+          return [];
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn('Failed to fetch document transcript', { 
+            documentId, 
+            error: errorMessage
+          });
           // Return empty array on failure - graceful degradation
           return [];
         }
@@ -665,8 +733,14 @@ export class EnhancedGranolaService {
       // Granola uses workspace instead of folder
       granolaFolder: data.workspace_id,
       tags: Array.isArray(data.tags) ? data.tags : [],
-      attachments: Array.isArray(data.attachments) ? data.attachments : []
+      attachments: Array.isArray(data.attachments) ? data.attachments : [],
+      updatedAt: data.updated_at ? new Date(data.updated_at) : undefined
     };
+
+    // Extract end time from calendar event
+    if (data.google_calendar_event?.end) {
+      meeting.endTime = new Date(data.google_calendar_event.end.dateTime || data.google_calendar_event.end.date);
+    }
 
     // Add panels if provided
     if (panels) {
@@ -692,6 +766,18 @@ export class EnhancedGranolaService {
     const start = new Date(event.start.dateTime || event.start.date);
     const end = new Date(event.end.dateTime || event.end.date);
     return Math.round((end.getTime() - start.getTime()) / 60000); // Duration in minutes
+  }
+
+  public isMeetingComplete(meeting: Meeting, graceMinutes: number = 5): boolean {
+    // If no end time, consider it complete (ad-hoc meeting)
+    if (!meeting.endTime) {
+      return true;
+    }
+
+    // Check if meeting ended at least graceMinutes ago
+    const now = new Date();
+    const gracePeriodMs = graceMinutes * 60 * 1000;
+    return (now.getTime() - meeting.endTime.getTime()) > gracePeriodMs;
   }
 
   private delay(ms: number): Promise<void> {

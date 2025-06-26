@@ -1,5 +1,7 @@
 import { Plugin, TFile, TFolder, Vault, App, PluginManifest, MetadataCache } from 'obsidian';
 import GranolaSyncPlugin from '../../src/main';
+import { MockLogger } from '../mocks/logger';
+import { TFile as MockTFile } from '../mocks/obsidian';
 
 // Mock Obsidian API
 declare global {
@@ -78,21 +80,59 @@ if (typeof HTMLElement !== 'undefined') {
 }
 
 export function createMockApp(): App {
+  const createdFiles = new Map<string, TFile>();
+  
   const mockVault = {
-    getMarkdownFiles: jest.fn(() => []),
-    getAbstractFileByPath: jest.fn(),
-    create: jest.fn(),
-    modify: jest.fn(),
-    delete: jest.fn(),
-    rename: jest.fn(),
+    getMarkdownFiles: jest.fn(() => Array.from(createdFiles.values())),
+    getAbstractFileByPath: jest.fn((path: string) => createdFiles.get(path) || null),
+    create: jest.fn(async (path: string, content: string) => {
+      const file = createMockFile(path, content);
+      createdFiles.set(path, file);
+      return file;
+    }),
+    modify: jest.fn(async (file: TFile, content: string) => {
+      // Update the file's stat to reflect modification
+      if (file.stat) {
+        file.stat.mtime = Date.now();
+        file.stat.size = content.length;
+      }
+    }),
+    delete: jest.fn(async (file: TFile) => {
+      createdFiles.delete(file.path);
+    }),
+    read: jest.fn(async (file: TFile) => {
+      const fileData = createdFiles.get(file.path);
+      if (!fileData) {
+        throw new Error(`File not found: ${file.path}`);
+      }
+      // Return the content that was stored when the file was created
+      return (fileData as any).content || '';
+    }),
+    rename: jest.fn(async (file: TFile, newPath: string) => {
+      const fileData = createdFiles.get(file.path);
+      if (fileData) {
+        createdFiles.delete(file.path);
+        fileData.path = newPath;
+        fileData.name = newPath.split('/').pop() || '';
+        createdFiles.set(newPath, fileData);
+      }
+    }),
     createFolder: jest.fn(),
-    on: jest.fn(),
+    on: jest.fn((event: string, handler: Function) => {
+      // Return a mock event reference
+      return { event, handler };
+    }),
     off: jest.fn(),
+    offref: jest.fn(),
     adapter: {
-      exists: jest.fn(),
+      exists: jest.fn((path: string) => createdFiles.has(path)),
       mkdir: jest.fn(),
       rmdir: jest.fn(),
-      read: jest.fn(),
+      read: jest.fn(async (path: string) => {
+        const file = createdFiles.get(path);
+        if (!file) throw new Error(`File not found: ${path}`);
+        return 'Mock file content';
+      }),
       write: jest.fn(),
       stat: jest.fn(),
       list: jest.fn(),
@@ -100,7 +140,25 @@ export function createMockApp(): App {
   } as unknown as Vault;
   
   const mockMetadataCache = {
-    getFileCache: jest.fn(),
+    getFileCache: jest.fn((file: TFile) => {
+      // Return frontmatter metadata for files
+      const content = (file as any).content;
+      if (content) {
+        const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+        if (frontmatterMatch) {
+          const frontmatter: any = {};
+          const lines = frontmatterMatch[1].split('\n');
+          for (const line of lines) {
+            const [key, value] = line.split(':').map(s => s.trim());
+            if (key && value) {
+              frontmatter[key] = value.replace(/['"]/g, '');
+            }
+          }
+          return { frontmatter };
+        }
+      }
+      return null;
+    }),
     on: jest.fn(),
     off: jest.fn(),
   } as unknown as MetadataCache;
@@ -134,18 +192,16 @@ export function createMockManifest(): PluginManifest {
 }
 
 export function createMockFile(path: string, content: string): TFile {
-  return {
-    path,
-    name: path.split('/').pop() || '',
-    extension: 'md',
-    vault: {} as Vault,
-    parent: null,
-    stat: {
-      ctime: Date.now(),
-      mtime: Date.now(),
-      size: content.length,
-    },
-  } as TFile;
+  const file = new MockTFile(path) as any;
+  file.stat = {
+    ctime: Date.now(),
+    mtime: Date.now(),
+    size: content.length,
+  };
+  file.vault = {} as Vault;
+  file.parent = null;
+  file.content = content;  // Store content for the read method
+  return file as TFile;
 }
 
 export interface VaultStructure {
@@ -165,8 +221,20 @@ export class TestPlugin {
     this.plugin = new GranolaSyncPlugin(this.mockApp, createMockManifest());
     
     // Mock plugin data methods with API key to prevent SetupWizard
-    this.plugin.loadData = jest.fn().mockResolvedValue({ apiKey: 'test-api-key' });
-    this.plugin.saveData = jest.fn().mockResolvedValue(undefined);
+    this.plugin.loadData = jest.fn().mockResolvedValue({ 
+      apiKey: 'test-api-key',
+      enhancedSyncState: {
+        version: 2,
+        fileIndex: {},
+        deletedIds: [],
+        lastSync: null,
+        stateChecksum: ''
+      }
+    });
+    this.plugin.saveData = jest.fn().mockImplementation(async (data) => {
+      // Simulate successful save
+      return Promise.resolve();
+    });
     
     // Mock plugin UI methods
     (this.plugin as any).addCommand = jest.fn();
@@ -179,7 +247,7 @@ export class TestPlugin {
       onClickEvent: jest.fn()
     });
     (this.plugin as any).addSettingTab = jest.fn();
-    (this.plugin as any).registerEvent = jest.fn();
+    (this.plugin as any).registerEvent = jest.fn((eventRef: any) => eventRef);
     (this.plugin as any).registerInterval = jest.fn();
     
     await this.plugin.onload();
@@ -191,11 +259,9 @@ export class TestPlugin {
   
   // Helper to create test vault structure
   async createTestVault(structure: VaultStructure) {
-    const files: TFile[] = [];
-    
     for (const [path, content] of Object.entries(structure)) {
-      const file = createMockFile(path, content);
-      files.push(file);
+      // Use the vault's create method to ensure files are tracked properly
+      await this.mockApp.vault.create(path, content);
       
       // Mock the metadata cache for this file
       const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
@@ -209,34 +275,27 @@ export class TestPlugin {
           }
         }
         
+        const existingImpl = (this.mockApp.metadataCache.getFileCache as jest.Mock).getMockImplementation();
         (this.mockApp.metadataCache.getFileCache as jest.Mock).mockImplementation((f: TFile) => {
           if (f.path === path) {
             return { frontmatter };
           }
-          return null;
+          return existingImpl ? existingImpl(f) : null;
         });
       }
     }
-    
-    // Update vault mock to return these files
-    (this.mockApp.vault.getMarkdownFiles as jest.Mock).mockReturnValue(files);
-    (this.mockApp.vault.getAbstractFileByPath as jest.Mock).mockImplementation((path: string) => {
-      return files.find(f => f.path === path) || null;
-    });
   }
   
   // Helper to simulate file operations
   async createFile(path: string, content: string) {
-    const file = createMockFile(path, content);
-    const currentFiles = (this.mockApp.vault.getMarkdownFiles as jest.Mock)();
-    (this.mockApp.vault.getMarkdownFiles as jest.Mock).mockReturnValue([...currentFiles, file]);
-    return file;
+    return await this.mockApp.vault.create(path, content);
   }
   
   async deleteFile(path: string) {
-    const currentFiles = (this.mockApp.vault.getMarkdownFiles as jest.Mock)();
-    const filtered = currentFiles.filter((f: TFile) => f.path !== path);
-    (this.mockApp.vault.getMarkdownFiles as jest.Mock).mockReturnValue(filtered);
+    const file = this.mockApp.vault.getAbstractFileByPath(path);
+    if (file) {
+      await this.mockApp.vault.delete(file);
+    }
   }
   
   // Helper to get plugin settings

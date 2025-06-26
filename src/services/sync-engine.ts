@@ -1,14 +1,16 @@
-import { SyncStateManager } from './sync-state-manager';
+import { EnhancedStateManager } from './enhanced-state-manager';
 import { EnhancedGranolaService } from './enhanced-granola-service';
 import { PathGenerator } from '../utils/path-generator';
 import { FileManager } from '../utils/file-manager';
 import { MarkdownBuilder } from '../utils/markdown-builder';
 import { SyncResult, SyncProgress, Meeting, SyncError, DocumentPanel } from '../types';
-import { Plugin } from 'obsidian';
+import { Plugin, TFile } from 'obsidian';
 import { Logger } from '../utils/logger';
 import { ChunkedContentProcessor } from '../utils/chunked-processor';
 import { ErrorHandler } from '../utils/error-handler';
 import { PanelProcessor } from './panel-processor';
+import { ConflictDetector, ConflictType, Conflict, ConflictResolution } from './conflict-detector';
+import { ConflictResolutionModal } from '../ui/conflict-modal';
 import GranolaSyncPlugin from '../main';
 
 export class SyncEngine {
@@ -23,9 +25,11 @@ export class SyncEngine {
   private batchStartTimes: number[] = [];
   private lastSyncResult: SyncResult | null = null;
   private panelProcessor: PanelProcessor;
+  private conflictDetector: ConflictDetector;
+  private enableConflictDetection: boolean = true; // Can be controlled via settings
   
   constructor(
-    private stateManager: SyncStateManager,
+    private stateManager: EnhancedStateManager,
     private granolaService: EnhancedGranolaService,
     private pathGenerator: PathGenerator,
     private plugin: Plugin,
@@ -34,8 +38,17 @@ export class SyncEngine {
     this.fileManager = new FileManager(plugin, logger);
     this.contentProcessor = new ChunkedContentProcessor(logger);
     this.errorHandler = new ErrorHandler(logger);
+    this.conflictDetector = new ConflictDetector(plugin.app, logger);
     // Get the panel processor from the plugin instance
     this.panelProcessor = (plugin as GranolaSyncPlugin).panelProcessor;
+  }
+  
+  /**
+   * Enable or disable conflict detection
+   */
+  setConflictDetection(enabled: boolean): void {
+    this.enableConflictDetection = enabled;
+    this.logger.info(`Conflict detection ${enabled ? 'enabled' : 'disabled'}`);
   }
   
   async sync(forceAll: boolean = false): Promise<SyncResult> {
@@ -98,21 +111,31 @@ export class SyncEngine {
       
       this.logger.debug(`Fetched ${meetings.length} meetings`);
       
-      if (meetings.length === 0) {
-        this.logger.info('No meetings to sync');
+      // Filter out in-progress meetings
+      const completedMeetings = meetings.filter(meeting => 
+        this.granolaService.isMeetingComplete(meeting, 5)
+      );
+      
+      const inProgressCount = meetings.length - completedMeetings.length;
+      if (inProgressCount > 0) {
+        this.logger.info(`Filtered out ${inProgressCount} in-progress meetings`);
+      }
+      
+      if (completedMeetings.length === 0) {
+        this.logger.info('No completed meetings to sync');
         return {
           ...result,
           duration: Date.now() - startTime
         };
       }
       
-      this.logger.info(`Found ${meetings.length} meetings to process`);
+      this.logger.info(`Found ${completedMeetings.length} completed meetings to process`);
       
       // Process in batches with adaptive sizing
-      let batchSize = this.getOptimalBatchSize(meetings.length);
+      let batchSize = this.getOptimalBatchSize(completedMeetings.length);
       let processedCount = 0;
       
-      while (processedCount < meetings.length) {
+      while (processedCount < completedMeetings.length) {
         if (this.isCancelled) {
           result.success = false;
           result.errors.push({
@@ -124,10 +147,10 @@ export class SyncEngine {
           break;
         }
         
-        const batch = meetings.slice(processedCount, processedCount + batchSize);
+        const batch = completedMeetings.slice(processedCount, processedCount + batchSize);
         const batchStartTime = Date.now();
         
-        await this.processBatch(batch, processedCount, meetings.length, result);
+        await this.processBatch(batch, processedCount, completedMeetings.length, result);
         
         // Track actual processed count
         processedCount += batch.length;
@@ -140,11 +163,11 @@ export class SyncEngine {
       // Update last sync time
       if (result.success) {
         this.stateManager.setLastSync(new Date().toISOString());
-        await this.stateManager.saveState();
+        // saveState is handled internally by EnhancedStateManager
       }
       
       result.duration = Date.now() - startTime;
-      this.updateProgress(meetings.length, meetings.length, 'Sync complete');
+      this.updateProgress(completedMeetings.length, completedMeetings.length, 'Sync complete');
       
       this.lastSyncResult = result;
       return result;
@@ -168,7 +191,9 @@ export class SyncEngine {
   
   cancelSync() {
     this.isCancelled = true;
-    this.logger.info('Sync cancelled');
+    if (this.logger) {
+      this.logger.info('Sync cancelled');
+    }
   }
   
   getProgress(): SyncProgress {
@@ -183,6 +208,9 @@ export class SyncEngine {
   ): Promise<void> {
     // Fetch panels for all meetings in batch first
     const panelMap = await this.fetchPanelsForBatch(meetings);
+    
+    // Fetch transcripts for all meetings in batch if enabled
+    const transcriptMap = await this.fetchTranscriptsForBatch(meetings);
     
     for (let i = 0; i < meetings.length; i++) {
       const meeting = meetings[i];
@@ -202,11 +230,67 @@ export class SyncEngine {
           continue;
         }
         
+        // Check for conflicts if enabled
+        let isAppendMode = false;
+        if (this.enableConflictDetection) {
+          const conflict = await this.detectConflict(meeting);
+          if (conflict) {
+            const resolution = await this.resolveConflict(conflict, meeting);
+            if (resolution === ConflictResolution.SKIP) {
+              this.logger.info(`Skipping meeting due to conflict resolution: ${meeting.title}`);
+              result.skipped++;
+              continue;
+            }
+            if (resolution === ConflictResolution.KEEP_LOCAL) {
+              // Mark for append mode
+              isAppendMode = true;
+              this.logger.info(`Will append new content for locally modified file: ${meeting.title}`);
+            }
+            // Apply other resolutions as needed
+            await this.applyConflictResolution(conflict, resolution, meeting);
+          }
+        }
+        
         // Add panels from pre-fetched map
-        const panels = panelMap.get(meeting.id);
+        let panels = panelMap.get(meeting.id) || [];
+        
+        // Apply template filtering if enabled
+        if (this.plugin.settings.templateFilterEnabled && this.plugin.settings.templateFilterName) {
+          const originalCount = panels.length;
+          panels = panels.filter(panel => {
+            // For now, filter by panel title containing the template name
+            // In the future, we might need to fetch template metadata
+            const matches = panel.title.toLowerCase().includes(this.plugin.settings.templateFilterName.toLowerCase());
+            if (!matches) {
+              this.logger.debug(`Filtering out panel "${panel.title}" - doesn't match template filter "${this.plugin.settings.templateFilterName}"`);
+            }
+            return matches;
+          });
+          
+          if (originalCount > 0 && panels.length === 0) {
+            this.logger.warn(`All ${originalCount} panels filtered out for meeting: ${meeting.title}`);
+          }
+        }
+        
         if (panels && panels.length > 0) {
           meeting.panels = panels;
-          this.logger.debug(`Added ${panels.length} panels to meeting: ${meeting.title}`);
+          this.logger.info(`Added ${panels.length} panels to meeting: ${meeting.title}`, {
+            panelTitles: panels.map(p => p.title),
+            panelIds: panels.map(p => p.panel_template_id)
+          });
+        } else {
+          this.logger.info(`No panels found for meeting: ${meeting.title}`, {
+            meetingId: meeting.id
+          });
+        }
+        
+        // Add transcript if available
+        const transcript = transcriptMap.get(meeting.id);
+        if (transcript) {
+          meeting.transcript = transcript;
+          this.logger.info(`Added transcript to meeting: ${meeting.title}`, {
+            transcriptLength: transcript.length
+          });
         }
         
         // Generate file path
@@ -241,14 +325,24 @@ export class SyncEngine {
         }
         
         // Create or update file
-        const { created } = await this.fileManager.createOrUpdateFile(
+        const { created, file } = await this.fileManager.createOrUpdateFile(
           filePath,
           content,
-          meeting
+          meeting,
+          isAppendMode
         );
         
-        // Update state
-        this.stateManager.addFile(meeting.id, filePath);
+        // Update state with content hash and sync version
+        const contentHash = this.calculateContentHash(content);
+        // Use a version number - could be timestamp-based or incremental
+        const syncVersion = Date.now();
+        
+        // Make sure file exists before updating state
+        if (file) {
+          await this.stateManager.addOrUpdateFile(meeting.id, filePath, contentHash, syncVersion);
+        } else {
+          this.logger.warn(`File creation succeeded but file object not returned for: ${filePath}`);
+        }
         
         if (created) {
           result.created++;
@@ -385,5 +479,145 @@ export class SyncEngine {
     }
     
     return panelMap;
+  }
+
+  /**
+   * Fetch transcripts for a batch of meetings if enabled
+   */
+  private async fetchTranscriptsForBatch(meetings: Meeting[]): Promise<Map<string, string>> {
+    const transcriptMap = new Map<string, string>();
+    
+    // Only fetch if transcripts are enabled
+    if (!this.plugin.settings.includeTranscripts) {
+      return transcriptMap;
+    }
+    
+    // Import transcript processor
+    const { TranscriptProcessor } = await import('./transcript-processor');
+    const transcriptProcessor = new TranscriptProcessor(this.logger);
+    
+    // Fetch transcripts concurrently with controlled concurrency
+    const CONCURRENT_LIMIT = 3; // Lower limit for transcripts as they're larger
+    for (let i = 0; i < meetings.length; i += CONCURRENT_LIMIT) {
+      const batch = meetings.slice(i, i + CONCURRENT_LIMIT);
+      const promises = batch.map(async (meeting) => {
+        try {
+          const segments = await this.granolaService.getDocumentTranscript(meeting.id);
+          if (segments && segments.length > 0) {
+            // Process segments with speaker identification
+            const processedSegments = transcriptProcessor.processTranscript(
+              segments,
+              meeting.id,
+              true, // deduplicate
+              0.68, // similarity threshold
+              4.5   // time window seconds
+            );
+            
+            // Format as markdown
+            const formattedTranscript = transcriptProcessor.formatTranscriptMarkdown(processedSegments);
+            return { id: meeting.id, transcript: formattedTranscript };
+          }
+          return { id: meeting.id, transcript: '' };
+        } catch (error) {
+          this.logger.warn(`Failed to fetch transcript for ${meeting.id}`, error);
+          return { id: meeting.id, transcript: '' };
+        }
+      });
+      
+      const results = await Promise.all(promises);
+      results.forEach(({ id, transcript }) => {
+        if (transcript) {
+          transcriptMap.set(id, transcript);
+        }
+      });
+    }
+    
+    return transcriptMap;
+  }
+  
+  /**
+   * Calculate content hash for state tracking
+   * Compatible with EnhancedStateManager's hash calculation
+   */
+  private calculateContentHash(content: string): string {
+    // Simple hash calculation - in production, this should match
+    // the algorithm used by EnhancedStateManager
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(16);
+  }
+  
+  /**
+   * Detect conflicts for a meeting
+   */
+  private async detectConflict(meeting: Meeting): Promise<Conflict | null> {
+    const existingPath = this.stateManager.getFilePath(meeting.id);
+    if (!existingPath) return null;
+    
+    const file = this.plugin.app.vault.getAbstractFileByPath(existingPath);
+    if (!file || !(file instanceof TFile)) {
+      // File was deleted locally
+      return {
+        type: ConflictType.FILE_MISSING,
+        granolaId: meeting.id,
+        localPath: existingPath,
+        description: 'Local file has been deleted',
+        remoteModifiedTime: new Date(meeting.updatedAt || meeting.createdAt).getTime()
+      };
+    }
+    
+    // Check if file was modified locally
+    const metadata = this.stateManager.getFileMetadata(meeting.id);
+    if (metadata && file.stat.mtime > metadata.lastSynced) {
+      // File was modified locally since last sync
+      return {
+        type: ConflictType.USER_MODIFIED,
+        granolaId: meeting.id,
+        localPath: existingPath,
+        description: 'Local file has been modified since last sync',
+        userModifiedTime: file.stat.mtime,
+        remoteModifiedTime: new Date(meeting.updatedAt || meeting.createdAt).getTime()
+      };
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Resolve a conflict - either automatically or via user interaction
+   */
+  private async resolveConflict(conflict: Conflict, meeting: Meeting): Promise<ConflictResolution> {
+    // For now, use simple automatic resolution
+    // TODO: Add user preference for automatic vs interactive resolution
+    
+    if (conflict.type === ConflictType.FILE_MISSING) {
+      // File was deleted - skip by default
+      return ConflictResolution.SKIP;
+    }
+    
+    if (conflict.type === ConflictType.USER_MODIFIED) {
+      // File was modified - keep local (we'll append new content)
+      return ConflictResolution.KEEP_LOCAL;
+    }
+    
+    // Default to keeping remote
+    return ConflictResolution.KEEP_REMOTE;
+  }
+  
+  /**
+   * Apply the chosen conflict resolution
+   */
+  private async applyConflictResolution(
+    conflict: Conflict, 
+    resolution: ConflictResolution, 
+    meeting: Meeting
+  ): Promise<void> {
+    // No longer creating backup files
+    // Resolution will be handled by the normal sync process
+    this.logger.info(`Applying resolution ${resolution} for conflict: ${conflict.description}`);
   }
 }

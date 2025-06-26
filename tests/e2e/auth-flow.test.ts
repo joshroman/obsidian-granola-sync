@@ -2,8 +2,8 @@ import { TestPlugin, mockGranolaAPI } from '../setup/test-environment';
 
 // Mock GranolaService
 const mockTestConnection = jest.fn();
-jest.mock('../../src/services/granola-service', () => ({
-  default: jest.fn().mockImplementation(() => ({
+jest.mock('../../src/services/enhanced-granola-service', () => ({
+  EnhancedGranolaService: jest.fn().mockImplementation(() => ({
     testConnection: mockTestConnection,
     getAllMeetings: jest.fn().mockResolvedValue([]),
     getMeetingsSince: jest.fn().mockResolvedValue([])

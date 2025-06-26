@@ -220,16 +220,88 @@ export class SettingsTab extends PluginSettingTab {
       cls: 'setting-item-description'
     });
 
+    containerEl.createEl('h3', { text: 'Template Configuration' });
+
+    // Template filtering
+    new Setting(containerEl)
+      .setName('Filter panels by template')
+      .setDesc('Only include panels from specific templates')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.templateFilterEnabled)
+        .onChange(async (value) => {
+          this.plugin.settings.templateFilterEnabled = value;
+          await this.plugin.saveSettings();
+          this.display(); // Refresh to show/hide template name field
+        }));
+
+    if (this.plugin.settings.templateFilterEnabled) {
+      new Setting(containerEl)
+        .setName('Template name filter')
+        .setDesc('Only include panels from templates containing this name (e.g., "My Custom Template")')
+        .addText(text => text
+          .setPlaceholder('My Custom Template')
+          .setValue(this.plugin.settings.templateFilterName)
+          .onChange(async (value) => {
+            this.plugin.settings.templateFilterName = value;
+            await this.plugin.saveSettings();
+          }));
+    }
+
+    // Include transcripts
+    new Setting(containerEl)
+      .setName('Include full transcripts')
+      .setDesc('Append full meeting transcripts with speaker identification')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.includeTranscripts)
+        .onChange(async (value) => {
+          this.plugin.settings.includeTranscripts = value;
+          await this.plugin.saveSettings();
+        }));
+
     containerEl.createEl('h3', { text: 'Sync Options' });
 
     // Automatic sync
     new Setting(containerEl)
       .setName('Automatic sync')
-      .setDesc('Automatically sync meetings every 30 minutes')
+      .setDesc('Automatically sync meetings at regular intervals')
       .addToggle(toggle => toggle
-        .setValue(this.plugin.settings.syncAutomatically)
+        .setValue(this.plugin.settings.autoSync)
         .onChange(async (value) => {
-          this.plugin.settings.syncAutomatically = value;
+          this.plugin.settings.autoSync = value;
+          await this.plugin.saveSettings();
+          // Update services to start/stop auto sync
+          await this.plugin.updateSettings(this.plugin.settings);
+          // Refresh display to show/hide interval dropdown
+          this.display();
+        }));
+
+    // Sync interval dropdown (only show when auto sync is enabled)
+    if (this.plugin.settings.autoSync) {
+      new Setting(containerEl)
+        .setName('Sync interval')
+        .setDesc('How often to check for new meetings')
+        .addDropdown(dropdown => dropdown
+          .addOption('300000', 'Every 5 minutes')
+          .addOption('900000', 'Every 15 minutes')
+          .addOption('1800000', 'Every 30 minutes')
+          .addOption('3600000', 'Every hour')
+          .setValue(String(this.plugin.settings.syncInterval || 900000))
+          .onChange(async (value) => {
+            this.plugin.settings.syncInterval = parseInt(value);
+            await this.plugin.saveSettings();
+            // Restart auto sync with new interval
+            await this.plugin.updateSettings(this.plugin.settings);
+          }));
+    }
+
+    // Show progress during sync
+    new Setting(containerEl)
+      .setName('Show sync progress')
+      .setDesc('Display detailed progress information during sync')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.showProgress)
+        .onChange(async (value) => {
+          this.plugin.settings.showProgress = value;
           await this.plugin.saveSettings();
         }));
 
@@ -314,6 +386,21 @@ export class SettingsTab extends PluginSettingTab {
         .setCta()
         .onClick(async () => {
           await this.plugin.performSync();
+        }));
+
+    // Rerun setup wizard button
+    new Setting(containerEl)
+      .setName('Setup Wizard')
+      .setDesc('Run the setup wizard again to change your configuration')
+      .addButton(button => button
+        .setButtonText('Rerun Setup Wizard')
+        .setCta()
+        .onClick(async () => {
+          // Reset wizard completion flag
+          this.plugin.settings.wizardCompleted = false;
+          await this.plugin.saveSettings();
+          // Show the wizard
+          this.plugin.showSetupWizard();
         }));
 
     // Clear API key button
