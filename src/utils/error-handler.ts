@@ -18,7 +18,11 @@ export class ErrorHandler {
    */
   handleError(error: unknown, context: string): SyncError {
     const errorInfo = this.parseError(error);
-    this.logger.error(`Error in ${context}:`, errorInfo);
+    
+    // Only log if we have a valid logger
+    if (this.logger && typeof this.logger.error === 'function') {
+      this.logger.error(`Error in ${context}:`, errorInfo);
+    }
     
     const userMessage = this.getUserMessage(errorInfo.type, errorInfo.message);
     
@@ -48,6 +52,14 @@ export class ErrorHandler {
     code?: string | number;
     stack?: string;
   } {
+    // Handle null or undefined
+    if (!error) {
+      return {
+        type: ErrorType.UNKNOWN,
+        message: 'Unknown error occurred'
+      };
+    }
+    
     if (error instanceof Error) {
       // Network errors
       if (error.message.includes('fetch') || 
@@ -56,7 +68,7 @@ export class ErrorHandler {
         return {
           type: ErrorType.NETWORK,
           message: error.message,
-          stack: error.stack
+          stack: error.stack || ''
         };
       }
       
@@ -68,7 +80,7 @@ export class ErrorHandler {
           type: ErrorType.API,
           message: error.message,
           code: this.extractStatusCode(error.message),
-          stack: error.stack
+          stack: error.stack || ''
         };
       }
       
@@ -78,7 +90,7 @@ export class ErrorHandler {
         return {
           type: ErrorType.VALIDATION,
           message: error.message,
-          stack: error.stack
+          stack: error.stack || ''
         };
       }
       
@@ -90,7 +102,7 @@ export class ErrorHandler {
         return {
           type: ErrorType.FILE_SYSTEM,
           message: error.message,
-          stack: error.stack
+          stack: error.stack || ''
         };
       }
       
@@ -98,7 +110,7 @@ export class ErrorHandler {
       return {
         type: ErrorType.UNKNOWN,
         message: error.message,
-        stack: error.stack
+        stack: error.stack || ''
       };
     }
     

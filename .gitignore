@@ -4,6 +4,7 @@ node_modules/
 # Build output
 main.js
 *.js.map
+dist/
 
 # IDE files
 .idea/

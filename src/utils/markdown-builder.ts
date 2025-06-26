@@ -1,16 +1,18 @@
-import { Meeting, Attachment } from '../types';
+import { Meeting, Attachment, DocumentPanel } from '../types';
+import { PanelProcessor } from '../services/panel-processor';
+import { StructuredLogger } from './structured-logger';
 import moment from 'moment';
 
 export class MarkdownBuilder {
-  static buildMeetingNote(meeting: Meeting, template?: string): string {
+  static buildMeetingNote(meeting: Meeting, template?: string, panelProcessor?: PanelProcessor): string {
     if (template) {
-      return this.processTemplate(template, meeting);
+      return this.processTemplate(template, meeting, panelProcessor);
     }
     
-    return this.buildDefaultContent(meeting);
+    return this.buildDefaultContent(meeting, panelProcessor);
   }
   
-  private static buildDefaultContent(meeting: Meeting): string {
+  private static buildDefaultContent(meeting: Meeting, panelProcessor?: PanelProcessor): string {
     const lines: string[] = [];
     
     // Frontmatter
@@ -74,6 +76,11 @@ export class MarkdownBuilder {
       lines.push('');
     }
     
+    // Panel sections
+    if (meeting.panels && meeting.panels.length > 0) {
+      lines.push(...this.buildPanelSections(meeting.panels, panelProcessor));
+    }
+    
     // Transcript
     if (meeting.transcript) {
       lines.push('## Transcript');
@@ -97,7 +104,7 @@ export class MarkdownBuilder {
     return lines.join('\n');
   }
   
-  private static processTemplate(template: string, meeting: Meeting): string {
+  private static processTemplate(template: string, meeting: Meeting, panelProcessor?: PanelProcessor): string {
     // Replace template variables
     let content = template;
     
@@ -166,7 +173,17 @@ export class MarkdownBuilder {
   }
   
   private static escapeYaml(value: string): string {
-    return value.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+    // Comprehensive YAML escaping
+    return value
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, '\\n')
+      .replace(/:/g, '\\:')
+      .replace(/>/g, '\\>')
+      .replace(/\|/g, '\\|')
+      .replace(/\*/g, '\\*')
+      .replace(/&/g, '\\&')
+      .replace(/#/g, '\\#');
   }
   
   private static formatDuration(minutes: number): string {
@@ -192,5 +209,54 @@ export class MarkdownBuilder {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+  
+  private static buildPanelSections(panels: DocumentPanel[], panelProcessor?: PanelProcessor): string[] {
+    const lines: string[] = [];
+    // Use injected processor or create default
+    const processor = panelProcessor || new PanelProcessor(new StructuredLogger());
+    
+    for (const panel of panels) {
+      // Add panel header
+      lines.push(`## Panel: ${panel.title}`);
+      lines.push('');
+      
+      // Extract structured content from the panel
+      const sections = processor.extractStructuredContent(panel);
+      
+      // If we have structured sections, format them
+      if (Object.keys(sections).length > 0) {
+        for (const [heading, content] of Object.entries(sections)) {
+          // Skip if this is just a wrapper "Content" section
+          if (heading === 'Content' && Object.keys(sections).length > 1) {
+            continue;
+          }
+          
+          // Add section heading if it's not the panel title
+          if (heading !== panel.title && heading !== 'Content') {
+            lines.push(`### ${heading}`);
+            lines.push('');
+          }
+          
+          // Add section content
+          if (content.trim()) {
+            lines.push(content);
+            lines.push('');
+          }
+        }
+      } else if (panel.original_content) {
+        // Fallback: If no structured content, try to convert HTML directly
+        const content = processor.convertHtmlToMarkdown(panel.original_content);
+        if (content.trim()) {
+          lines.push(content);
+          lines.push('');
+        }
+      }
+      
+      // Add spacing between panels
+      lines.push('');
+    }
+    
+    return lines;
   }
 }

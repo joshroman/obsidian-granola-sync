@@ -15,6 +15,7 @@ import { ErrorHandler } from './utils/error-handler';
 import { StructuredLogger } from './utils/structured-logger';
 import { PerformanceMonitor } from './utils/performance-monitor';
 import { ErrorTracker } from './utils/error-tracker';
+import { PanelProcessor } from './services/panel-processor';
 
 export default class GranolaSyncPlugin extends Plugin {
   settings!: PluginSettings;
@@ -26,6 +27,8 @@ export default class GranolaSyncPlugin extends Plugin {
   tokenManager?: TokenManager;
   performanceMonitor!: PerformanceMonitor;
   errorTracker!: ErrorTracker;
+  structuredLogger!: StructuredLogger;
+  panelProcessor!: PanelProcessor;
   lastError: string = '';
   private syncInterval: number | null = null;
   private eventRefs: EventRef[] = [];
@@ -41,6 +44,10 @@ export default class GranolaSyncPlugin extends Plugin {
     // Initialize logger and error handler
     this.logger = new Logger(this);
     this.errorHandler = new ErrorHandler(this.logger);
+    
+    // Initialize shared structured logger and panel processor
+    this.structuredLogger = new StructuredLogger('GranolaSync', this);
+    this.panelProcessor = new PanelProcessor(this.structuredLogger);
     
     // Load settings
     await this.loadSettings();
@@ -106,6 +113,29 @@ export default class GranolaSyncPlugin extends Plugin {
       name: 'Open Setup Wizard',
       callback: () => {
         this.showSetupWizard();
+      }
+    });
+    
+    this.addCommand({
+      id: 'granola-reset-sync-state',
+      name: 'Reset Sync State',
+      callback: async () => {
+        const confirmed = confirm('This will reset the sync state and allow re-syncing all meetings. Use this after manually deleting meeting files. Continue?');
+        if (confirmed) {
+          await this.resetSyncState();
+          new Notice('✅ Sync state reset. You can now sync all meetings again.');
+        }
+      }
+    });
+    
+    this.addCommand({
+      id: 'granola-force-sync-all',
+      name: 'Force Sync All Meetings',
+      callback: async () => {
+        const confirmed = confirm('This will sync ALL meetings from Granola, ignoring the last sync time. Continue?');
+        if (confirmed) {
+          await this.performSync(true);
+        }
       }
     });
 
@@ -199,7 +229,7 @@ export default class GranolaSyncPlugin extends Plugin {
     }
   }
   
-  async performSync() {
+  async performSync(forceAll: boolean = false) {
     // Check if we have authentication (either token manager or manual API key)
     const hasAuth = this.tokenManager?.hasTokens() || this.settings.apiKey;
     
@@ -212,7 +242,7 @@ export default class GranolaSyncPlugin extends Plugin {
     // In test environment, skip modal
     if (process.env.NODE_ENV === 'test') {
       try {
-        const result = await this.syncEngine.sync();
+        const result = await this.syncEngine.sync(forceAll);
         if (result.success) {
           new Notice(`Sync complete! ${result.created} created, ${result.updated} updated`);
         } else {
@@ -233,15 +263,19 @@ export default class GranolaSyncPlugin extends Plugin {
     
     try {
       this.updateStatusBar('syncing');
-      const result = await this.syncEngine.sync();
+      const result = await this.syncEngine.sync(forceAll);
       
-      if (result.success) {
+      if (result && result.success) {
         new Notice(`Sync complete! ${result.created} created, ${result.updated} updated`);
-      } else {
+      } else if (result && result.errors && result.errors.length > 0) {
         new Notice(`Sync failed: ${result.errors[0]?.error || 'Unknown error'}`);
+      } else {
+        new Notice('Sync failed: Unknown error');
       }
       
-      modal.showComplete(result);
+      if (result) {
+        modal.showComplete(result);
+      }
       this.updateStatusBar();
     } catch (error) {
       this.errorHandler.showError(error, 'Sync operation');
@@ -313,6 +347,20 @@ export default class GranolaSyncPlugin extends Plugin {
     });
     wizard.open();
     return wizard;
+  }
+  
+  async resetSyncState() {
+    this.logger.info('Resetting sync state...');
+    
+    // Clear the state manager
+    await this.stateManager.clearState();
+    
+    // Clear last sync time
+    this.settings.lastSync = '';
+    await this.saveSettings();
+    
+    this.logger.info('Sync state reset complete');
+    this.updateStatusBar();
   }
   
   private startAutoSync() {

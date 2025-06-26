@@ -3,11 +3,13 @@ import { EnhancedGranolaService } from './enhanced-granola-service';
 import { PathGenerator } from '../utils/path-generator';
 import { FileManager } from '../utils/file-manager';
 import { MarkdownBuilder } from '../utils/markdown-builder';
-import { SyncResult, SyncProgress, Meeting, SyncError } from '../types';
+import { SyncResult, SyncProgress, Meeting, SyncError, DocumentPanel } from '../types';
 import { Plugin } from 'obsidian';
 import { Logger } from '../utils/logger';
 import { ChunkedContentProcessor } from '../utils/chunked-processor';
 import { ErrorHandler } from '../utils/error-handler';
+import { PanelProcessor } from './panel-processor';
+import GranolaSyncPlugin from '../main';
 
 export class SyncEngine {
   private isCancelled: boolean = false;
@@ -20,6 +22,7 @@ export class SyncEngine {
   private errorHandler: ErrorHandler;
   private batchStartTimes: number[] = [];
   private lastSyncResult: SyncResult | null = null;
+  private panelProcessor: PanelProcessor;
   
   constructor(
     private stateManager: SyncStateManager,
@@ -31,9 +34,11 @@ export class SyncEngine {
     this.fileManager = new FileManager(plugin, logger);
     this.contentProcessor = new ChunkedContentProcessor(logger);
     this.errorHandler = new ErrorHandler(logger);
+    // Get the panel processor from the plugin instance
+    this.panelProcessor = (plugin as GranolaSyncPlugin).panelProcessor;
   }
   
-  async sync(): Promise<SyncResult> {
+  async sync(forceAll: boolean = false): Promise<SyncResult> {
     // Queue sync request if one is already in progress
     if (this.syncLock) {
       // Check queue size limit
@@ -56,10 +61,10 @@ export class SyncEngine {
       });
     }
     
-    return this.performSync();
+    return this.performSync(forceAll);
   }
   
-  private async performSync(): Promise<SyncResult> {
+  private async performSync(forceAll: boolean = false): Promise<SyncResult> {
     this.syncLock = true;
     this.isCancelled = false;
     const startTime = Date.now();
@@ -84,8 +89,9 @@ export class SyncEngine {
       
       // Fetch meetings
       this.updateProgress(0, 0, 'Fetching meetings...');
-      const lastSync = this.stateManager.getLastSync();
-      this.logger.debug(`Last sync: ${lastSync}`);
+      const lastSync = forceAll ? null : this.stateManager.getLastSync();
+      this.logger.info(`Last sync timestamp: ${lastSync || 'none (will fetch all meetings)'}`);
+      this.logger.info(`Force all sync: ${forceAll}`);
       const meetings = lastSync 
         ? await this.granolaService.getMeetingsSince(lastSync)
         : await this.granolaService.getAllMeetings();
@@ -175,6 +181,9 @@ export class SyncEngine {
     totalMeetings: number,
     result: SyncResult
   ): Promise<void> {
+    // Fetch panels for all meetings in batch first
+    const panelMap = await this.fetchPanelsForBatch(meetings);
+    
     for (let i = 0; i < meetings.length; i++) {
       const meeting = meetings[i];
       const currentIndex = startIndex + i;
@@ -193,9 +202,20 @@ export class SyncEngine {
           continue;
         }
         
+        // Add panels from pre-fetched map
+        const panels = panelMap.get(meeting.id);
+        if (panels && panels.length > 0) {
+          meeting.panels = panels;
+          this.logger.debug(`Added ${panels.length} panels to meeting: ${meeting.title}`);
+        }
+        
         // Generate file path
         const filePath = this.pathGenerator.generatePath(meeting);
         const existingPath = this.stateManager.getFilePath(meeting.id);
+        
+        this.logger.debug(`Processing meeting: ${meeting.title}`);
+        this.logger.debug(`Generated path: ${filePath}`);
+        this.logger.debug(`Existing path: ${existingPath || 'none'}`);
         
         // Check if file needs to be moved
         if (existingPath && existingPath !== filePath) {
@@ -217,7 +237,7 @@ export class SyncEngine {
           });
         } else {
           // Use regular processing for normal meetings
-          content = MarkdownBuilder.buildMeetingNote(meeting);
+          content = MarkdownBuilder.buildMeetingNote(meeting, undefined, this.panelProcessor);
         }
         
         // Create or update file
@@ -338,5 +358,32 @@ export class SyncEngine {
   
   getLastSyncResult(): SyncResult | null {
     return this.lastSyncResult;
+  }
+  
+  /**
+   * Fetch panels for a batch of meetings concurrently with rate limiting
+   */
+  private async fetchPanelsForBatch(meetings: Meeting[]): Promise<Map<string, DocumentPanel[]>> {
+    const panelMap = new Map<string, DocumentPanel[]>();
+    
+    // Fetch panels concurrently with controlled concurrency
+    const CONCURRENT_LIMIT = 5;
+    for (let i = 0; i < meetings.length; i += CONCURRENT_LIMIT) {
+      const batch = meetings.slice(i, i + CONCURRENT_LIMIT);
+      const promises = batch.map(async (meeting) => {
+        try {
+          const panels = await this.granolaService.getDocumentPanels(meeting.id);
+          return { id: meeting.id, panels };
+        } catch (error) {
+          this.logger.warn(`Failed to fetch panels for ${meeting.id}`, error);
+          return { id: meeting.id, panels: [] };
+        }
+      });
+      
+      const results = await Promise.all(promises);
+      results.forEach(({ id, panels }) => panelMap.set(id, panels));
+    }
+    
+    return panelMap;
   }
 }

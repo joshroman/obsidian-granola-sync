@@ -10,6 +10,8 @@ export interface Meeting {
   granolaFolder?: string;
   tags?: string[];
   attachments?: Attachment[];
+  panels?: DocumentPanel[];
+  panelSections?: Record<string, string>; // Structured content from panels
 }
 
 export interface Attachment {
@@ -108,3 +110,33 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   debugMode: false,
   logLevel: 'error',
 };
+
+export interface DocumentPanel {
+  id: string;
+  document_id: string;
+  panel_template_id: string;
+  title: string;
+  content: any; // ProseMirror content structure
+  original_content: string; // HTML content
+  generated_lines?: Array<{
+    text: string;
+    type: string;
+  }>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentPanelsResponse {
+  panels: DocumentPanel[];
+}
+
+export interface PanelSection {
+  heading: string;
+  content: string;
+}
+
+export interface SyncState {
+  lastSyncDate: string;
+  syncedMeetingIds: string[];
+  version: string;
+}

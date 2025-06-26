@@ -1,9 +1,10 @@
-import { Meeting } from '../types';
+import { Meeting, DocumentPanel, DocumentPanelsResponse } from '../types';
 import { StructuredLogger } from '../utils/structured-logger';
 import { PerformanceMonitor } from '../utils/performance-monitor';
 import { ErrorTracker } from '../utils/error-tracker';
 import { requestUrl, RequestUrlParam } from 'obsidian';
 import * as os from 'os';
+import pako from 'pako';
 
 export interface APIConfig {
   apiKey: string;
@@ -107,7 +108,10 @@ export class EnhancedGranolaService {
           });
           
           if (response && response.docs && Array.isArray(response.docs)) {
-            meetings.push(...response.docs.map((m: any) => this.transformMeeting(m)));
+            const transformedMeetings = await Promise.all(
+              response.docs.map((m: any) => this.transformMeeting(m))
+            );
+            meetings.push(...transformedMeetings);
           }
           
           // Update cursor for next page
@@ -156,7 +160,10 @@ export class EnhancedGranolaService {
               const docDate = new Date(doc.created_at || doc.updated_at);
               return docDate >= sinceDate;
             });
-            meetings.push(...filteredDocs.map((m: any) => this.transformMeeting(m)));
+            const transformedMeetings = await Promise.all(
+              filteredDocs.map((m: any) => this.transformMeeting(m))
+            );
+            meetings.push(...transformedMeetings);
           }
           
           // Update cursor for next page
@@ -215,6 +222,52 @@ export class EnhancedGranolaService {
     );
   }
 
+  async getDocumentPanels(documentId: string): Promise<DocumentPanel[]> {
+    return this.performanceMonitor.measureAsync(
+      'fetch-document-panels',
+      async () => {
+        try {
+          this.logger.debug('Fetching panels for document', { documentId });
+          
+          const response = await this.makeRequest('/v1/get-document-panels', {
+            method: 'POST',
+            body: { document_id: documentId }
+          });
+          
+          console.log('[Granola Plugin Debug] Panels response:', {
+            hasData: !!response,
+            hasPanels: !!(response && response.panels),
+            panelsLength: response?.panels?.length || 0
+          });
+          
+          if (response && response.panels && Array.isArray(response.panels)) {
+            this.logger.info('Retrieved panels for document', { 
+              documentId, 
+              panelCount: response.panels.length,
+              panelTitles: response.panels.map((p: DocumentPanel) => p.title)
+            });
+            return response.panels;
+          }
+          
+          return [];
+        } catch (error) {
+          this.logger.warn('Failed to fetch document panels', { 
+            documentId, 
+            error: error instanceof Error ? error.message : 'Unknown error' 
+          });
+          this.errorTracker.trackError(
+            error instanceof Error ? error : new Error('Unknown error'),
+            'fetch-document-panels',
+            { documentId }
+          );
+          // Return empty array on failure - graceful degradation
+          return [];
+        }
+      },
+      { documentId }
+    );
+  }
+
   private async makeRequest(
     path: string,
     options: {
@@ -244,7 +297,7 @@ export class EnhancedGranolaService {
       'X-Client-Type': 'electron',
       'X-Client-Platform': this.getPlatform(),
       'X-Client-Architecture': this.getArchitecture(),
-      'X-Client-Id': `granola-electron-${this.getGranolaVersion()}`,
+      'X-Client-Id': `granola-${this.config.headers?.['X-Client-Type'] || 'electron'}-${this.getGranolaVersion()}`,
       ...this.config.headers
     };
     
@@ -262,7 +315,8 @@ export class EnhancedGranolaService {
           url,
           method,
           headers,
-          throw: false // Don't throw on HTTP errors, we'll handle them
+          throw: false, // Don't throw on HTTP errors, we'll handle them
+          contentType: null // Important: Don't let Obsidian guess charset to avoid buffer corruption
         };
         
         // Only add body if it's explicitly provided (not undefined)
@@ -272,11 +326,18 @@ export class EnhancedGranolaService {
         }
         
         console.log('[Granola Plugin Debug] Sending request with Obsidian requestUrl');
-        const response = await requestUrl(requestOptions);
+        
+        let response;
+        try {
+          response = await requestUrl(requestOptions);
+        } catch (requestError) {
+          console.error('[Granola Plugin Debug] requestUrl threw an error:', requestError);
+          console.error('[Granola Plugin Debug] Request options were:', requestOptions);
+          throw requestError;
+        }
         
         console.log('[Granola Plugin Debug] Response status:', response.status);
         console.log('[Granola Plugin Debug] Response headers:', response.headers);
-        console.log('[Granola Plugin Debug] Response data:', response.json || response.text);
         
         // Convert Obsidian's plain object headers to standard Headers instance
         const standardHeaders = new Headers(response.headers as Record<string, string>);
@@ -301,24 +362,49 @@ export class EnhancedGranolaService {
         // Handle errors
         if (response.status >= 400) {
           let errorMessage = `API error: ${response.status}`;
+          let errorDetails = null;
           
-          // Try to get error details from response
-          if (response.json && typeof response.json === 'object') {
-            // If we have a JSON error response
-            const errorData = response.json;
-            if (errorData.message) {
-              errorMessage = `API error ${response.status}: ${errorData.message}`;
-            } else if (errorData.error) {
-              errorMessage = `API error ${response.status}: ${errorData.error}`;
+          // Try to parse error response body
+          try {
+            // Check if response is gzipped
+            const contentEncoding = response.headers['content-encoding'] || response.headers['Content-Encoding'];
+            
+            if (contentEncoding === 'gzip' && response.arrayBuffer) {
+              // Decompress gzipped error response
+              const compressed = new Uint8Array(response.arrayBuffer);
+              const decompressed = pako.ungzip(compressed, { to: 'string' });
+              errorDetails = JSON.parse(decompressed);
+            } else if (response.json && typeof response.json === 'object') {
+              errorDetails = response.json;
+            } else if (response.text) {
+              // Try to parse as JSON first
+              try {
+                errorDetails = JSON.parse(response.text);
+              } catch {
+                errorDetails = { message: response.text };
+              }
             }
-          } else if (response.text) {
-            // If we have text response
-            errorMessage = `API error ${response.status}: ${response.text}`;
+            
+            if (errorDetails) {
+              if (errorDetails.message) {
+                errorMessage = `API error ${response.status}: ${errorDetails.message}`;
+              } else if (errorDetails.error) {
+                errorMessage = `API error ${response.status}: ${errorDetails.error}`;
+              } else {
+                errorMessage = `API error ${response.status}: ${JSON.stringify(errorDetails)}`;
+              }
+            }
+          } catch (parseError) {
+            console.error('[Granola Plugin Debug] Failed to parse error response:', parseError);
           }
           
           console.error('[Granola Plugin Debug] API error:', {
             status: response.status,
             message: errorMessage,
+            errorDetails: errorDetails,
+            url: url,
+            method: method,
+            body: body,
             headers: response.headers
           });
           
@@ -327,25 +413,97 @@ export class EnhancedGranolaService {
         
         // Parse successful response
         try {
-          // Obsidian's requestUrl should handle gzip automatically when response.json is available
-          // If response.json is undefined but we have text, it might be a parsing issue
+          // Check if response is gzipped
+          const contentEncoding = response.headers['content-encoding'] || response.headers['Content-Encoding'];
+          console.log('[Granola Plugin Debug] Content-Encoding:', contentEncoding);
+          
+          if (contentEncoding === 'gzip') {
+            // Response says it's gzipped, but Obsidian might have already decompressed it
+            console.log('[Granola Plugin Debug] Response has gzip encoding header');
+            
+            // First, try to parse response.json directly (Obsidian may have already decompressed)
+            if (response.json && typeof response.json === 'object') {
+              console.log('[Granola Plugin Debug] Obsidian already decompressed the response');
+              return response.json;
+            }
+            
+            // If not, try manual decompression
+            console.log('[Granola Plugin Debug] Attempting manual decompression...');
+            
+            // CRITICAL: Use arrayBuffer directly - do NOT touch response.text!
+            if (!response.arrayBuffer) {
+              throw new Error('No arrayBuffer available - Obsidian API might be outdated (requires 0.13.25+)');
+            }
+            
+            console.log('[Granola Plugin Debug] ArrayBuffer size:', response.arrayBuffer.byteLength);
+            
+            // Check if the data looks like it's already JSON (starts with { or [)
+            const uint8Array = new Uint8Array(response.arrayBuffer);
+            const firstChar = String.fromCharCode(uint8Array[0]);
+            
+            if (firstChar === '{' || firstChar === '[') {
+              console.log('[Granola Plugin Debug] Data appears to be already decompressed JSON');
+              const textDecoder = new TextDecoder();
+              const jsonString = textDecoder.decode(uint8Array);
+              return JSON.parse(jsonString);
+            }
+            
+            // Try gzip decompression
+            try {
+              const decompressed = pako.ungzip(uint8Array, { to: 'string' });
+              console.log('[Granola Plugin Debug] Manual decompression successful, length:', decompressed.length);
+              
+              // Log first 500 chars to see what we got
+              console.log('[Granola Plugin Debug] Decompressed content preview:', decompressed.substring(0, 500));
+              
+              // Check if it's HTML
+              if (decompressed.trim().startsWith('<!DOCTYPE') || decompressed.trim().startsWith('<html')) {
+                console.error('[Granola Plugin Debug] Response is HTML, not JSON!');
+                throw new Error('API returned HTML instead of JSON - possible authentication or endpoint issue');
+              }
+              
+              // Parse the decompressed JSON
+              const jsonData = JSON.parse(decompressed);
+              console.log('[Granola Plugin Debug] Successfully parsed JSON data');
+              return jsonData;
+            } catch (decompressError) {
+              console.error('[Granola Plugin Debug] Manual decompression failed:', decompressError);
+              
+              // Last resort: try to decode as plain text
+              try {
+                const textDecoder = new TextDecoder();
+                const text = textDecoder.decode(uint8Array);
+                console.log('[Granola Plugin Debug] Trying plain text decode, preview:', text.substring(0, 200));
+                return JSON.parse(text);
+              } catch (textError) {
+                console.error('[Granola Plugin Debug] Plain text decode also failed:', textError);
+                throw new Error(`Failed to process response: ${decompressError.message}`);
+              }
+            }
+          }
+          
+          // Not gzipped - use normal parsing
           if (response.json) {
-            console.log('[Granola Plugin Debug] Response data:', response.json);
-            return response.json;
-          } else if (response.text) {
-            // Try to parse text as JSON
-            const parsed = JSON.parse(response.text);
-            console.log('[Granola Plugin Debug] Response data (from text):', parsed);
-            return parsed;
+            console.log('[Granola Plugin Debug] Using response.json (not gzipped)');
+            // Check if response.json is actually JSON or if it's HTML
+            if (typeof response.json === 'object' && response.json !== null) {
+              return response.json;
+            } else {
+              console.error('[Granola Plugin Debug] response.json is not an object:', typeof response.json);
+              console.error('[Granola Plugin Debug] response.json value:', response.json);
+              throw new Error('Response is not valid JSON');
+            }
           } else {
-            throw new Error('No response data available');
+            throw new Error('No valid response data available');
           }
         } catch (e) {
           console.error('[Granola Plugin Debug] Failed to parse response:', e);
           console.error('[Granola Plugin Debug] Response object:', {
             hasJson: !!response.json,
             hasText: !!response.text,
-            status: response.status
+            hasArrayBuffer: !!response.arrayBuffer,
+            status: response.status,
+            headers: response.headers
           });
           throw new Error('Invalid response from API');
         }
@@ -488,9 +646,9 @@ export class EnhancedGranolaService {
   }
 
 
-  private transformMeeting(data: any): Meeting {
+  private transformMeeting(data: any, panels?: DocumentPanel[]): Meeting {
     // Transform Granola document structure to our Meeting interface
-    return {
+    const meeting: Meeting = {
       id: data.id,
       title: data.title || 'Untitled Meeting',
       date: new Date(data.created_at),
@@ -509,6 +667,13 @@ export class EnhancedGranolaService {
       tags: Array.isArray(data.tags) ? data.tags : [],
       attachments: Array.isArray(data.attachments) ? data.attachments : []
     };
+
+    // Add panels if provided
+    if (panels) {
+      meeting.panels = panels;
+    }
+
+    return meeting;
   }
 
   private extractHighlights(notes: any): string[] {
@@ -562,12 +727,9 @@ export class EnhancedGranolaService {
   }
 
   private getUserAgent(): string {
-    const platform = process.platform;
-    const arch = process.arch;
-    const osRelease = os.release();
-    
-    // Mimic Granola's Electron user agent
-    return `Granola/${this.getGranolaVersion()} Electron/33.4.5 Chrome/130.0.6723.191 Node/20.18.3 (${this.getOSName()} ${osRelease})`;
+    // Mimic Granola's Electron user agent exactly
+    // The OS version and build are hardcoded to match the working client
+    return `Granola/${this.getGranolaVersion()} Electron/33.4.5 Chrome/130.0.6723.191 Node/20.18.3 (macOS 15.3.1 24D70)`;
   }
 
   private getPlatform(): string {

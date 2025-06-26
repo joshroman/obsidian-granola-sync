@@ -217,4 +217,24 @@ export class SyncStateManager {
     // Note: Event refs are automatically cleaned up by Obsidian
     // when the plugin unloads, but we track them for completeness
   }
+  
+  async clearState(): Promise<void> {
+    // Reset to initial state
+    this.state = {
+      version: 1,
+      lastSync: '',
+      files: {},
+      fileIndex: {},
+      deletedIds: new Set()
+    };
+    
+    // Clear indexes
+    this.pathToIdIndex = {};
+    
+    // Save the cleared state
+    await this.saveState();
+    
+    // Also clear the files property (backward compatibility)
+    this.state.files = {};
+  }
 }

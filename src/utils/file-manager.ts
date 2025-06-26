@@ -54,6 +54,8 @@ export class FileManager {
   ): Promise<{ created: boolean; file: TFile }> {
     const normalizedPath = normalizePath(filePath);
     
+    this.logger.debug(`createOrUpdateFile called for: ${normalizedPath}`);
+    
     // Ensure parent folder exists
     const folderPath = normalizedPath.substring(0, normalizedPath.lastIndexOf('/'));
     if (folderPath) {
@@ -61,6 +63,7 @@ export class FileManager {
     }
     
     const existingFile = this.plugin.app.vault.getAbstractFileByPath(normalizedPath);
+    this.logger.debug(`Existing file check: ${existingFile ? existingFile.path : 'not found'}`);
     
     if (existingFile instanceof TFile) {
       // Update existing file
@@ -71,9 +74,21 @@ export class FileManager {
       throw new Error(`Path exists but is not a file: ${normalizedPath}`);
     } else {
       // Create new file
-      const file = await this.plugin.app.vault.create(normalizedPath, content);
-      this.logger.debug(`Created file: ${normalizedPath}`);
-      return { created: true, file };
+      try {
+        const file = await this.plugin.app.vault.create(normalizedPath, content);
+        this.logger.debug(`Created file: ${normalizedPath}`);
+        return { created: true, file };
+      } catch (error) {
+        this.logger.error(`Failed to create file: ${normalizedPath}`, error);
+        // Check if file was created by another process
+        const checkAgain = this.plugin.app.vault.getAbstractFileByPath(normalizedPath);
+        if (checkAgain instanceof TFile) {
+          this.logger.warn(`File was created by another process, updating instead: ${normalizedPath}`);
+          await this.plugin.app.vault.modify(checkAgain, content);
+          return { created: false, file: checkAgain };
+        }
+        throw error;
+      }
     }
   }
   
