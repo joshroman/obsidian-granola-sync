@@ -52,7 +52,7 @@ Seamlessly sync your Granola meeting notes to Obsidian, keeping all your meeting
 4. Click Install, then Enable
 
 ### Manual Installation
-1. Download the latest release from [GitHub Releases](https://github.com/yourusername/obsidian-granola-sync/releases)
+1. Download the latest release from [GitHub Releases](https://github.com/joshroman/obsidian-granola-sync/releases)
 2. Extract the files to your vault's `.obsidian/plugins/obsidian-granola-sync/` folder
 3. Reload Obsidian
 4. Enable the plugin in Settings > Community Plugins
@@ -223,7 +223,7 @@ Enable debug mode in settings to see detailed logs:
 ### File Explorer Display Issues
 If your file explorer shows folders/files in a grid layout instead of a list:
 - This is caused by themes or other plugins modifying the file explorer CSS
-- See [troubleshooting/file-explorer-fixes](troubleshooting/file-explorer-fixes/) for a CSS snippet solution
+- Use the CSS snippet in `troubleshooting/file-explorer-fixes/file-explorer-layout-fix-granola.css` to fix this issue
 
 ## Security & Privacy
 
@@ -238,7 +238,7 @@ If your file explorer shows folders/files in a grid layout instead of a list:
 ### Building from Source
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/obsidian-granola-sync.git
+git clone https://github.com/joshroman/obsidian-granola-sync.git
 cd obsidian-granola-sync
 
 # Install dependencies
@@ -260,9 +260,18 @@ npm test
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/obsidian-granola-sync/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/obsidian-granola-sync/discussions)
-- **Documentation**: [Wiki](https://github.com/yourusername/obsidian-granola-sync/wiki)
+- **Issues**: [GitHub Issues](https://github.com/joshroman/obsidian-granola-sync/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/joshroman/obsidian-granola-sync/discussions)
+- **Documentation**: [Wiki](https://github.com/joshroman/obsidian-granola-sync/wiki)
+
+## Version History
+
+### v1.0.0 (2024-03-20)
+- Initial release with full Granola sync functionality
+- Support for multiple folder organization methods
+- Conflict detection and resolution
+- Performance optimized for large meeting libraries
+- Comprehensive test coverage
 
 ## License
 
