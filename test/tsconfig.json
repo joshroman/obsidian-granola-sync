@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "strict": false,
+    "types": ["jest", "node", "@wdio/globals"]
+  },
+  "include": ["**/*.ts", "**/*.spec.ts"],
+  "exclude": []
+}
