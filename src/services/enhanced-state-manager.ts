@@ -203,11 +203,8 @@ export class EnhancedStateManager {
         this.plugin.app.vault.on('delete', this.handleDelete.bind(this))
       )
     );
-    this.eventRefs.push(
-      this.plugin.registerEvent(
-        this.plugin.app.vault.on('modify', this.handleModify.bind(this))
-      )
-    );
+    // Note: Obsidian vault doesn't have a 'modify' event, only 'create', 'rename', and 'delete'
+    // We'll handle modifications through the sync process itself
   }
 
   async rebuildIndex(): Promise<void> {
@@ -280,18 +277,8 @@ export class EnhancedStateManager {
     await this.saveStateDebounced();
   }
 
-  private async handleModify(file: TFile): Promise<void> {
-    const granolaId = this.pathToIdIndex[file.path];
-    if (!granolaId) return;
-    
-    const metadata = this.state.files[granolaId];
-    if (metadata) {
-      // Update modification time but not content hash
-      // Content hash is only updated during sync
-      metadata.lastModified = file.stat.mtime;
-      await this.saveStateDebounced();
-    }
-  }
+  // Note: handleModify removed as Obsidian doesn't have a 'modify' event
+  // File modifications are tracked during sync operations
 
   // Transaction support
   beginTransaction(id: string): void {
