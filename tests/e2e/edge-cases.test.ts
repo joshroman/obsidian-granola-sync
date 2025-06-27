@@ -170,12 +170,9 @@ describe('Granola Sync E2E - Edge Cases', () => {
       // Assert
       expect(result.success).toBe(true);
       
-      // For now, accept that batch processing might miss a few meetings at the end
-      // due to adaptive batch sizing. This is a known issue that should be fixed
-      // in the sync engine, but for testing purposes we'll allow a small margin
+      // All 1000 meetings should be processed
       const totalProcessed = result.created + result.updated + result.skipped + result.errors.length;
-      expect(totalProcessed).toBeGreaterThanOrEqual(970);
-      expect(totalProcessed).toBeLessThanOrEqual(1000);
+      expect(totalProcessed).toBe(1000);
       // TODO: Test progress updates when implemented
       // expect(progressUpdates.length).toBeGreaterThan(10); // Multiple progress updates
       // expect(progressUpdates[progressUpdates.length - 1]).toBe(1000);

@@ -85,10 +85,9 @@ describe('Special Characters and Edge Cases E2E Tests', () => {
       const createdPaths = (env.vault.create as jest.Mock).mock.calls.map(call => call[0]);
       console.log('Created paths:', createdPaths);
       
-      // Some meetings might have duplicate names after sanitization
-      // The actual implementation doesn't sanitize all special characters
-      expect(env.vault.create).toHaveBeenCalledTimes(createdPaths.length);
-      expect(createdPaths.length).toBeGreaterThanOrEqual(5);
+      // All 8 meetings should be processed successfully
+      expect(env.vault.create).toHaveBeenCalledTimes(8);
+      expect(createdPaths.length).toBe(8);
       
       // No paths should contain unsafe characters
       createdPaths.forEach(path => {
