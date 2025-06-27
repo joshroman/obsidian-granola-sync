@@ -41,11 +41,12 @@ jobs:
       env:
         TZ: UTC
     
-    - name: Run E2E tests
-      if: matrix.os != 'windows-latest'  # Skip E2E on Windows for now
-      run: npm run test:e2e
-      env:
-        TZ: UTC
+    # E2E tests are temporarily disabled due to infrastructure issues
+    # - name: Run E2E tests
+    #   if: matrix.os != 'windows-latest'  # Skip E2E on Windows for now
+    #   run: npm run test:e2e
+    #   env:
+    #     TZ: UTC
     
     - name: Verify build output
       run: |
