@@ -1,0 +1,45 @@
+name: Question
+description: Ask a question about using Granola Sync
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for using Granola Sync! Please provide details about your question.
+        
+        💡 **Tip**: Check the [README](https://github.com/joshroman/obsidian-granola-sync/blob/main/README.md) first - it might already have your answer!
+        
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: "How do I..."
+    validations:
+      required: true
+      
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Any additional context that might help us answer your question
+      placeholder: "I'm trying to..."
+      
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS
+        - Windows
+        - Linux
+        - Not applicable
+      default: 3
+      
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin Version
+      description: "Found in Settings → Community plugins"
+      placeholder: "e.g., 1.0.0"
