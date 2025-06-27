@@ -214,6 +214,11 @@ Enable debug mode in settings to see detailed logs:
 2. Open Developer Console (Ctrl/Cmd + Shift + I)
 3. Look for entries starting with `[Granola Sync]`
 
+### File Explorer Display Issues
+If your file explorer shows folders/files in a grid layout instead of a list:
+- This is caused by themes or other plugins modifying the file explorer CSS
+- See [troubleshooting/file-explorer-fixes](troubleshooting/file-explorer-fixes/) for a CSS snippet solution
+
 ## Security & Privacy
 
 - API keys are stored locally in your vault

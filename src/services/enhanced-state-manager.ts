@@ -388,6 +388,14 @@ export class EnhancedStateManager {
   clearDeletedId(granolaId: string): void {
     this.state.deletedIds.delete(granolaId);
   }
+  
+  async clearState(): Promise<void> {
+    // Reset to empty state
+    this.state = this.createEmptyState();
+    this.pathToIdIndex = {};
+    await this.saveState();
+    this.logger.info('State cleared successfully');
+  }
 
   setLastSync(timestamp: string): void {
     this.state.lastSync = timestamp;

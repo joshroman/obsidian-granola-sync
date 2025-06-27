@@ -1414,6 +1414,31 @@
   display: none !important;
 }
 
+/* Alert styling for limitations */
+.setting-alert {
+  margin-top: 15px;
+  padding: 12px 16px;
+  background-color: rgba(var(--color-yellow-rgb), 0.1);
+  border: 1px solid rgba(var(--color-yellow-rgb), 0.3);
+  border-radius: 6px;
+}
+
+.setting-alert p {
+  margin: 0;
+  font-size: 0.9em;
+  color: var(--text-warning);
+}
+
+.setting-alert p.mod-warning {
+  color: var(--text-warning);
+}
+
+/* Disabled option styling */
+select option[disabled] {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .wizard-features {

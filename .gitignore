@@ -28,3 +28,22 @@ coverage/
 # Obsidian test vault (if used for development)
 test-vault/.obsidian/workspace.json
 test-vault/.obsidian/workspace-mobile.json
+
+# Obsidian cache
+.obsidian-cache/
+
+# Test artifacts
+test-results/
+scripts/test-obsidian-vault/
+
+# Temporary files
+*.tmp
+*.bak
+*~
+cleaned-data*.json
+debug-*.md
+test-panels*.js
+
+# Build artifacts
+obsidian-granola-sync-plugin/
+*.zip

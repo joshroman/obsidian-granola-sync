@@ -337,7 +337,7 @@ describe('Folder Organization E2E Tests', () => {
         ...DEFAULT_SETTINGS,
         apiKey: 'test-key',
         targetFolder: 'Meetings',
-        fileNamingFormat: 'date-meeting-name',
+        includeDateInFilename: true,
         dateFormat: 'dd-MM-yyyy',
         folderOrganization: 'flat'
       };

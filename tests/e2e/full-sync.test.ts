@@ -285,7 +285,7 @@ Existing content that should not be duplicated.`
       // Arrange
       await plugin.updateSettings({
         apiKey: 'test-key',
-        fileNamingFormat: 'meeting-name'
+        includeDateInFilename: false
       });
       
       const meeting = generateMockMeeting({ 
@@ -308,7 +308,7 @@ Existing content that should not be duplicated.`
       // Arrange
       await plugin.updateSettings({
         apiKey: 'test-key',
-        fileNamingFormat: 'date-meeting-name',
+        includeDateInFilename: true,
         dateFormat: 'yyyy-MM-dd'
       });
       

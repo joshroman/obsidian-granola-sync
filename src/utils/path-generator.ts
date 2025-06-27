@@ -18,9 +18,12 @@ export class PathGenerator {
         break;
         
       case 'mirror-granola':
+        // Check if Granola provided folder information
         if (meeting.granolaFolder) {
           const sanitizedFolder = InputValidator.validateFolderPath(meeting.granolaFolder);
           pathParts.push(sanitizedFolder);
+        } else {
+          console.warn(`[PathGenerator] No Granola folder for meeting: ${meeting.title}`);
         }
         break;
         
@@ -44,12 +47,18 @@ export class PathGenerator {
     const settings = this.getSettings();
     const sanitizedTitle = InputValidator.validateMeetingTitle(meeting.title);
     
+    // Always add a unique suffix to prevent overwrites
+    // Use last 8 characters of meeting ID for uniqueness
+    const uniqueSuffix = meeting.id.slice(-8);
+    
     if (settings.includeDateInFilename) {
       // Use UTC to ensure consistent dates across timezones
       const datePrefix = this.formatDateUTC(meeting.date, settings.dateFormat);
-      return `${datePrefix} ${sanitizedTitle}.md`;
+      // Include unique suffix to prevent overwrites of meetings with same title on same date
+      return `${datePrefix} ${sanitizedTitle} -- ${uniqueSuffix}.md`;
     } else {
-      return `${sanitizedTitle}.md`;
+      // Use double dash separator - no special characters allowed in Obsidian
+      return `${sanitizedTitle} -- ${uniqueSuffix}.md`;
     }
   }
   

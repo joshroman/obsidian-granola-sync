@@ -119,7 +119,7 @@ async function testFullSync() {
     const testSettings = {
       apiKey: getToken(),
       targetFolder: 'Meetings',
-      fileNamingFormat: 'date-meeting-name',
+      includeDateInFilename: true,
       dateFormat: 'yyyy-MM-dd',
       folderOrganization: 'flat',
       batchSize: 10,

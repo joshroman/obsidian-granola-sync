@@ -354,7 +354,7 @@ describe('Timezone Handling E2E Tests', () => {
 
   describe('Custom date format with timezones', () => {
     it('should apply custom date formats correctly', async () => {
-      plugin.settings.fileNamingFormat = 'date-meeting-name';
+      plugin.settings.includeDateInFilename = true;
       plugin.settings.dateFormat = 'dd-MM-yyyy';
 
       const meetings = [
@@ -389,7 +389,7 @@ describe('Timezone Handling E2E Tests', () => {
 
       for (const test of formatTests) {
         plugin.settings.dateFormat = test.format;
-        plugin.settings.fileNamingFormat = 'date-meeting-name';
+        plugin.settings.includeDateInFilename = true;
 
         const meetings = [{
           id: '1',

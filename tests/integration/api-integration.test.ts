@@ -267,7 +267,7 @@ describe('Granola API Integration Tests', () => {
 
       const pathGenerator = new PathGenerator(() => ({
         targetFolder: 'Meetings',
-        fileNamingFormat: 'date-meeting-name',
+        includeDateInFilename: true,
         dateFormat: 'yyyy-MM-dd',
         folderOrganization: 'flat'
       }));

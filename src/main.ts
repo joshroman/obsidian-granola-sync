@@ -94,6 +94,15 @@ export default class GranolaSyncPlugin extends Plugin {
         }
       }
     });
+    
+    this.addCommand({
+      id: 'granola-debug-meeting-data',
+      name: 'Debug Granola Meeting Data',
+      callback: async () => {
+        await this.granolaService.debugMeetingData();
+        new Notice('Check console for meeting data');
+      }
+    });
 
     // Add ribbon icon
     this.addRibbonIcon('sync', 'Granola Sync', async () => {
@@ -158,6 +167,12 @@ export default class GranolaSyncPlugin extends Plugin {
     } else {
       this.stopAutoSync();
     }
+  }
+  
+  async updateSettings(newSettings: PluginSettings) {
+    // Update plugin settings with new values
+    this.settings = newSettings;
+    await this.saveSettings();
   }
   
   async performSync(forceAll: boolean = false) {

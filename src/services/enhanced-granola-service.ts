@@ -27,6 +27,7 @@ export class EnhancedGranolaService {
   private rateLimitInfo: RateLimitInfo | null = null;
   private requestQueue: Array<() => Promise<any>> = [];
   private isProcessingQueue = false;
+  private loggedMeetingData = false;
   
   constructor(
     config: APIConfig,
@@ -102,12 +103,17 @@ export class EnhancedGranolaService {
         let cursor: string | undefined = undefined;
         let hasMore = true;
         
-        while (hasMore) {
+        console.log('[Granola Plugin Debug] Starting getAllMeetings...');
+        
+        try {
+          while (hasMore) {
           // Build filters object - only include cursor if we have one
           const filters: any = { limit: 100 };
           if (cursor) {
             filters.cursor = cursor;
           }
+          
+          console.log('[Granola Plugin Debug] Making request with filters:', filters);
           
           // Use the correct Granola endpoint - documents not meetings
           const response = await this.makeRequest('/v2/get-documents', {
@@ -119,14 +125,19 @@ export class EnhancedGranolaService {
             hasData: !!response,
             hasDocs: !!(response && response.docs),
             docsLength: response?.docs?.length || 0,
-            hasNextCursor: !!(response && response.next_cursor)
+            hasNextCursor: !!(response && response.next_cursor),
+            responseKeys: response ? Object.keys(response) : []
           });
           
           if (response && response.docs && Array.isArray(response.docs)) {
+            console.log('[Granola Plugin Debug] Processing', response.docs.length, 'documents');
             const transformedMeetings = await Promise.all(
               response.docs.map((m: any) => this.transformMeeting(m))
             );
             meetings.push(...transformedMeetings);
+            console.log('[Granola Plugin Debug] Total meetings so far:', meetings.length);
+          } else {
+            console.log('[Granola Plugin Debug] No documents in response or invalid format');
           }
           
           // Update cursor for next page
@@ -142,6 +153,10 @@ export class EnhancedGranolaService {
         
         console.log('[Granola Plugin Debug] Total meetings fetched:', meetings.length);
         return meetings;
+        } catch (error) {
+          console.error('[Granola Plugin Debug] Error in getAllMeetings:', error);
+          throw error;
+        }
       },
       { type: 'all' }
     );
@@ -235,6 +250,33 @@ export class EnhancedGranolaService {
       },
       { meetingId: id }
     );
+  }
+  
+  async debugMeetingData(): Promise<void> {
+    // Fetch just a few meetings to see their full data structure
+    const response = await this.makeRequest('/v2/get-documents', {
+      method: 'POST',
+      body: { limit: 3 }
+    });
+    
+    if (response && response.docs && response.docs.length > 0) {
+      const doc = response.docs[0];
+      console.log('[Granola Plugin Debug] Full document structure:', {
+        type: doc.type,
+        chapters: doc.chapters,
+        people: doc.people,
+        notes_structure: doc.notes ? Object.keys(doc.notes) : 'no notes',
+        all_fields: Object.keys(doc)
+      });
+      
+      // Log detailed info about specific fields
+      if (doc.chapters) {
+        console.log('[Granola Plugin Debug] Chapters detail:', doc.chapters);
+      }
+      if (doc.people) {
+        console.log('[Granola Plugin Debug] People detail:', doc.people);
+      }
+    }
   }
 
   async getDocumentPanels(documentId: string): Promise<DocumentPanel[]> {
@@ -715,6 +757,22 @@ export class EnhancedGranolaService {
 
 
   private transformMeeting(data: any, panels?: DocumentPanel[]): Meeting {
+    // Log only for the first few meetings to understand the data structure
+    if (!this.loggedMeetingData) {
+      this.loggedMeetingData = true;
+      console.log('[Granola Plugin Debug] Sample document data:', {
+        id: data.id,
+        title: data.title,
+        workspace_id: data.workspace_id,
+        workspace_name: data.workspace_name,
+        folder: data.folder,
+        type: data.type,
+        chapters: data.chapters,
+        people: data.people,
+        available_fields: Object.keys(data).slice(0, 20) // First 20 fields
+      });
+    }
+    
     // Transform Granola document structure to our Meeting interface
     const meeting: Meeting = {
       id: data.id,
@@ -731,7 +789,14 @@ export class EnhancedGranolaService {
       // Duration from google_calendar_event
       duration: this.extractDuration(data.google_calendar_event),
       // Granola uses workspace instead of folder
-      granolaFolder: data.workspace_id,
+      // Log workspace data to debug folder organization
+      granolaFolder: (() => {
+        const folder = data.workspace_id || data.workspace_name || data.workspace || data.folder || '';
+        if (!folder && this.loggedMeetingData) {
+          console.log('[Granola Plugin Debug] No workspace/folder data found. Available fields:', Object.keys(data));
+        }
+        return folder ? this.formatWorkspaceName(folder) : '';
+      })(),
       tags: Array.isArray(data.tags) ? data.tags : [],
       attachments: Array.isArray(data.attachments) ? data.attachments : [],
       updatedAt: data.updated_at ? new Date(data.updated_at) : undefined
@@ -768,16 +833,29 @@ export class EnhancedGranolaService {
     return Math.round((end.getTime() - start.getTime()) / 60000); // Duration in minutes
   }
 
-  public isMeetingComplete(meeting: Meeting, graceMinutes: number = 5): boolean {
-    // If no end time, consider it complete (ad-hoc meeting)
-    if (!meeting.endTime) {
-      return true;
-    }
-
-    // Check if meeting ended at least graceMinutes ago
-    const now = new Date();
-    const gracePeriodMs = graceMinutes * 60 * 1000;
-    return (now.getTime() - meeting.endTime.getTime()) > gracePeriodMs;
+  public isMeetingComplete(meeting: Meeting): boolean {
+    // Temporarily always return true to debug the sync issue
+    // TODO: Revert this after debugging
+    
+    this.logger.debug(`Meeting "${meeting.title}" completion check - temporarily returning true for all meetings`);
+    
+    return true;
+    
+    // Original logic commented out for debugging:
+    // Granola applies the automatic default template when a meeting is marked as complete
+    // If the meeting has a summary or notes, it means Granola has processed it
+    // This is a more reliable indicator than checking calendar end times
+    
+    // const hasContent = !!(meeting.summary && meeting.summary.trim().length > 0);
+    
+    // this.logger.debug(`Meeting "${meeting.title}" completion check`, {
+    //   hasContent,
+    //   summaryLength: meeting.summary?.length || 0,
+    //   hasSummary: !!meeting.summary
+    // });
+    
+    // If the meeting has content (summary/notes), Granola has processed it as complete
+    // return hasContent;
   }
 
   private delay(ms: number): Promise<void> {
@@ -797,6 +875,15 @@ export class EnhancedGranolaService {
   private isRateLimitError(error: Error): boolean {
     return error.message.includes('429') || 
            error.message.toLowerCase().includes('rate limit');
+  }
+  
+  private formatWorkspaceName(workspaceId: string): string {
+    // Convert workspace ID to a more user-friendly folder name
+    // e.g., "workspace-123" -> "Workspace 123", "my-workspace" -> "My Workspace"
+    return workspaceId
+      .split(/[-_]/)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 
   getRateLimitInfo(): RateLimitInfo | null {

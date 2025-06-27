@@ -1,0 +1,220 @@
+import { browser } from "@wdio/globals";
+
+export interface MockMeeting {
+  id: string;
+  title: string;
+  date: Date;
+  summary: string;
+  transcript?: string;
+  highlights?: string[];
+  attendees?: string[];
+  tags?: string[];
+  granolaFolder?: string;
+}
+
+export class TestUtils {
+  /**
+   * Get the plugin instance
+   */
+  static async getPlugin() {
+    return browser.executeAsync((done) => {
+      // @ts-ignore
+      const plugin = window.app.plugins.plugins["obsidian-granola-sync"];
+      done(plugin);
+    });
+  }
+
+  /**
+   * Get the Obsidian app instance
+   */
+  static async getApp() {
+    return browser.executeAsync((done) => {
+      // @ts-ignore
+      done(window.app);
+    });
+  }
+
+  /**
+   * Configure plugin settings
+   */
+  static async configurePlugin(settings: any) {
+    await browser.execute((s) => {
+      // @ts-ignore
+      const plugin = window.app.plugins.plugins["obsidian-granola-sync"];
+      Object.assign(plugin.settings, s);
+      // Also set a test API key if not provided
+      if (!plugin.settings.apiKey) {
+        plugin.settings.apiKey = "test-api-key";
+      }
+      // Mark wizard as completed for testing
+      plugin.settings.wizardCompleted = true;
+      // Initialize auth service with the API key
+      if (plugin.authService) {
+        plugin.authService.apiKey = "test-api-key";
+      }
+    }, settings);
+  }
+
+  /**
+   * Mock Granola API responses
+   */
+  static async mockGranolaAPI(meetings: MockMeeting[]) {
+    await browser.execute((m) => {
+      // @ts-ignore
+      const plugin = window.app.plugins.plugins["obsidian-granola-sync"];
+      // Convert date strings back to Date objects
+      const meetingsWithDates = m.map(meeting => ({
+        ...meeting,
+        date: new Date(meeting.date)
+      }));
+      plugin.granolaService.getAllMeetings = async () => meetingsWithDates;
+      plugin.granolaService.getMeetingsSince = async (since: string) => {
+        const sinceDate = new Date(since);
+        return meetingsWithDates.filter(meeting => meeting.date >= sinceDate);
+      };
+    }, meetings);
+  }
+
+  /**
+   * Trigger a sync operation and wait for completion
+   */
+  static async performSync(forceAll: boolean = false) {
+    const result = await browser.executeAsync((force, done) => {
+      // @ts-ignore
+      const plugin = window.app.plugins.plugins["obsidian-granola-sync"];
+      plugin.performSync(force).then(done);
+    }, forceAll);
+    
+    // Additional wait to ensure file operations complete
+    await browser.pause(1000);
+    return result;
+  }
+
+  /**
+   * Check if a file exists in the vault
+   */
+  static async fileExists(path: string): Promise<boolean> {
+    return browser.execute((p) => {
+      // @ts-ignore
+      const vault = window.app.vault;
+      const file = vault.getAbstractFileByPath(p);
+      return !!file;
+    }, path);
+  }
+
+  /**
+   * Get file content
+   */
+  static async getFileContent(path: string): Promise<string | null> {
+    return browser.executeAsync(async (p, done) => {
+      // @ts-ignore
+      const vault = window.app.vault;
+      const file = vault.getAbstractFileByPath(p);
+      if (file && file.extension === 'md') {
+        const content = await vault.read(file);
+        done(content);
+      } else {
+        done(null);
+      }
+    }, path);
+  }
+
+  /**
+   * Get all files in a folder
+   */
+  static async getFilesInFolder(folderPath: string): Promise<string[]> {
+    return browser.execute((path) => {
+      // @ts-ignore
+      const vault = window.app.vault;
+      const folder = vault.getAbstractFileByPath(path);
+      if (folder && 'children' in folder) {
+        return folder.children
+          .filter((f: any) => f.extension === 'md')
+          .map((f: any) => f.path);
+      }
+      return [];
+    }, folderPath);
+  }
+
+  /**
+   * Clear all test data
+   */
+  static async clearTestData() {
+    await browser.execute(() => {
+      // @ts-ignore
+      const plugin = window.app.plugins.plugins["obsidian-granola-sync"];
+      // Clear sync state
+      plugin.stateManager.clearState();
+      // Reset settings to defaults
+      plugin.settings.lastSync = "";
+      plugin.settings.wizardCompleted = false;
+    });
+
+    // Delete test folders
+    await TestUtils.deleteFolder("Meetings");
+    await TestUtils.deleteFolder("TestMeetings");
+  }
+
+  /**
+   * Delete a folder and all its contents
+   */
+  static async deleteFolder(folderPath: string) {
+    await browser.execute(async (path) => {
+      // @ts-ignore
+      const vault = window.app.vault;
+      const folder = vault.getAbstractFileByPath(path);
+      if (folder && 'children' in folder) {
+        // Delete all files in folder recursively
+        const deleteRecursive = async (abstractFile: any) => {
+          if ('children' in abstractFile) {
+            for (const child of abstractFile.children) {
+              await deleteRecursive(child);
+            }
+          }
+          await vault.delete(abstractFile);
+        };
+        await deleteRecursive(folder);
+      }
+    }, folderPath);
+  }
+
+  /**
+   * Wait for a modal to appear
+   */
+  static async waitForModal(className: string, timeout: number = 5000): Promise<boolean> {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      const exists = await browser.execute((cls) => {
+        return document.querySelector(`.${cls}`) !== null;
+      }, className);
+      
+      if (exists) return true;
+      await browser.pause(100);
+    }
+    return false;
+  }
+
+  /**
+   * Click a button by text
+   */
+  static async clickButton(text: string) {
+    await browser.execute((btnText) => {
+      const button = Array.from(document.querySelectorAll("button"))
+        .find(btn => btn.textContent?.includes(btnText));
+      if (button) {
+        button.click();
+      }
+    }, text);
+  }
+
+  /**
+   * Get current wizard step
+   */
+  static async getCurrentWizardStep(): Promise<number> {
+    return browser.execute(() => {
+      const progressText = document.querySelector(".progress-text")?.textContent || "";
+      const match = progressText.match(/Step (\d+)/);
+      return match ? parseInt(match[1]) : 0;
+    });
+  }
+}

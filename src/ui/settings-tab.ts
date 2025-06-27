@@ -148,20 +148,19 @@ export class SettingsTab extends PluginSettingTab {
 
     // File naming format
     new Setting(containerEl)
-      .setName('File naming format')
-      .setDesc('How to name meeting note files')
-      .addDropdown(dropdown => dropdown
-        .addOption('meeting-name', 'Meeting name only')
-        .addOption('date-meeting-name', 'Date + Meeting name')
-        .setValue(this.plugin.settings.fileNamingFormat)
-        .onChange(async (value: any) => {
-          this.plugin.settings.fileNamingFormat = value;
+      .setName('Include date in filename')
+      .setDesc('Add date prefix to meeting note files')
+      .addToggle(toggle => toggle
+        .setValue(this.plugin.settings.includeDateInFilename)
+        .onChange(async (value) => {
+          this.plugin.settings.includeDateInFilename = value;
           await this.plugin.saveSettings();
           this.updatePreview();
+          this.display(); // Refresh to show/hide date format field
         }));
 
     // Date format (only shown when using date in filename)
-    if (this.plugin.settings.fileNamingFormat === 'date-meeting-name') {
+    if (this.plugin.settings.includeDateInFilename) {
       new Setting(containerEl)
         .setName('Date format')
         .setDesc('Format for dates in filenames (using date-fns format)')
@@ -447,7 +446,7 @@ export class SettingsTab extends PluginSettingTab {
 
     // Add filename
     let filename = '';
-    if (settings.fileNamingFormat === 'date-meeting-name') {
+    if (settings.includeDateInFilename) {
       filename = '2024-03-20 ';
     }
     filename += 'Team Standup.md';

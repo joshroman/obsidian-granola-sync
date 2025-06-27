@@ -78,6 +78,8 @@ export interface PluginSettings {
   autoSync: boolean; // Renamed from syncAutomatically for consistency with wizard
   syncInterval: number; // How often to sync in milliseconds
   showProgress: boolean; // Whether to show detailed progress during sync
+  onlyCompletedMeetings: boolean; // Only sync meetings that have ended
+  completedMeetingGraceMinutes: number; // Minutes after meeting end before syncing
   
   // Performance settings
   batchSize: number; // Number of meetings to process at once
@@ -114,6 +116,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   autoSync: false,
   syncInterval: 900000, // 15 minutes
   showProgress: true,
+  onlyCompletedMeetings: false, // Disabled by default to sync all meetings
+  completedMeetingGraceMinutes: 5, // Not used with template-based detection
   batchSize: 10,
   requestTimeout: 30000, // 30 seconds
   granolaConsentGiven: false,

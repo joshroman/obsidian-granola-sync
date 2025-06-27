@@ -10,7 +10,7 @@ export const FIXED_TIMESTAMP = FIXED_DATE.getTime();
 export const DEFAULT_TEST_SETTINGS: PluginSettings = {
   apiKey: 'test-api-key-123',
   targetFolder: 'Meetings',
-  fileNamingFormat: 'date-meeting-name',
+  includeDateInFilename: true,
   dateFormat: 'yyyy-MM-dd',
   folderOrganization: 'flat',
   dateFolderFormat: 'daily',

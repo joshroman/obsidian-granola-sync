@@ -109,16 +109,49 @@ export class SyncEngine {
         ? await this.granolaService.getMeetingsSince(lastSync)
         : await this.granolaService.getAllMeetings();
       
-      this.logger.debug(`Fetched ${meetings.length} meetings`);
+      this.logger.info(`Fetched ${meetings.length} meetings from Granola API`);
+      if (meetings.length === 0) {
+        this.logger.warn('No meetings returned from Granola API. Possible causes:', {
+          hasApiKey: !!this.plugin.settings.apiKey,
+          lastSync: lastSync,
+          forceAll: forceAll
+        });
+      }
       
-      // Filter out in-progress meetings
-      const completedMeetings = meetings.filter(meeting => 
-        this.granolaService.isMeetingComplete(meeting, 5)
-      );
+      // Log current sync settings for debugging
+      this.logger.info('Current sync settings:', {
+        onlyCompletedMeetings: this.plugin.settings.onlyCompletedMeetings,
+        templateFilterEnabled: this.plugin.settings.templateFilterEnabled,
+        templateFilterName: this.plugin.settings.templateFilterName || 'none',
+        folderOrganization: this.plugin.settings.folderOrganization,
+        includeDateInFilename: this.plugin.settings.includeDateInFilename,
+        targetFolder: this.plugin.settings.targetFolder,
+        dateFolderFormat: this.plugin.settings.dateFolderFormat
+      });
       
-      const inProgressCount = meetings.length - completedMeetings.length;
-      if (inProgressCount > 0) {
-        this.logger.info(`Filtered out ${inProgressCount} in-progress meetings`);
+      // Optionally filter out in-progress meetings
+      let completedMeetings = meetings;
+      if (this.plugin.settings.onlyCompletedMeetings) {
+        this.logger.warn(`Meeting completion filter is ENABLED - checking each meeting...`);
+        completedMeetings = meetings.filter(meeting => {
+          const isComplete = this.granolaService.isMeetingComplete(meeting);
+          if (!isComplete) {
+            this.logger.warn(`FILTER REASON: Meeting marked as incomplete`, {
+              meetingId: meeting.id,
+              meetingTitle: meeting.title,
+              hasSummary: !!meeting.summary,
+              summaryLength: meeting.summary?.length || 0
+            });
+          }
+          return isComplete;
+        });
+        
+        const inProgressCount = meetings.length - completedMeetings.length;
+        if (inProgressCount > 0) {
+          this.logger.warn(`FILTERED OUT ${inProgressCount} meetings as incomplete`);
+        }
+      } else {
+        this.logger.info(`Meeting completion filter is DISABLED - processing all meetings`);
       }
       
       if (completedMeetings.length === 0) {
@@ -168,6 +201,17 @@ export class SyncEngine {
       
       result.duration = Date.now() - startTime;
       this.updateProgress(completedMeetings.length, completedMeetings.length, 'Sync complete');
+      
+      // Log final results for debugging
+      this.logger.info('Sync complete - Final results:', {
+        totalMeetings: meetings.length,
+        completedMeetings: completedMeetings.length,
+        created: result.created,
+        updated: result.updated,
+        skipped: result.skipped,
+        errors: result.errors.length,
+        duration: result.duration
+      });
       
       this.lastSyncResult = result;
       return result;
@@ -225,7 +269,10 @@ export class SyncEngine {
         
         // Check if user deleted this file
         if (this.stateManager.isDeleted(meeting.id)) {
-          this.logger.debug(`Skipping deleted meeting: ${meeting.title}`);
+          this.logger.warn(`SKIP REASON: Meeting marked as deleted in state manager`, {
+            meetingId: meeting.id,
+            meetingTitle: meeting.title
+          });
           result.skipped++;
           continue;
         }
@@ -237,7 +284,11 @@ export class SyncEngine {
           if (conflict) {
             const resolution = await this.resolveConflict(conflict, meeting);
             if (resolution === ConflictResolution.SKIP) {
-              this.logger.info(`Skipping meeting due to conflict resolution: ${meeting.title}`);
+              this.logger.warn(`SKIP REASON: Conflict resolution chose to skip`, {
+                meetingId: meeting.id,
+                meetingTitle: meeting.title,
+                conflictType: conflict.type
+              });
               result.skipped++;
               continue;
             }
@@ -297,9 +348,22 @@ export class SyncEngine {
         const filePath = this.pathGenerator.generatePath(meeting);
         const existingPath = this.stateManager.getFilePath(meeting.id);
         
-        this.logger.debug(`Processing meeting: ${meeting.title}`);
-        this.logger.debug(`Generated path: ${filePath}`);
-        this.logger.debug(`Existing path: ${existingPath || 'none'}`);
+        this.logger.info(`Processing meeting: ${meeting.title} (ID: ${meeting.id})`);
+        this.logger.info(`Generated path: ${filePath}`);
+        this.logger.info(`Existing path: ${existingPath || 'none'}`);
+        
+        // Validate the path
+        if (!filePath || filePath.includes('undefined')) {
+          this.logger.warn(`SKIP REASON: Invalid path generated`, {
+            meetingId: meeting.id,
+            meetingTitle: meeting.title,
+            generatedPath: filePath,
+            pathIncludesUndefined: filePath ? filePath.includes('undefined') : 'null path',
+            granolaFolder: meeting.granolaFolder || 'none'
+          });
+          result.skipped++;
+          continue;
+        }
         
         // Check if file needs to be moved
         if (existingPath && existingPath !== filePath) {
@@ -356,6 +420,16 @@ export class SyncEngine {
         syncError.meetingId = meeting.id;
         syncError.meetingTitle = meeting.title;
         result.errors.push(syncError);
+        
+        // Count file creation failures as skipped
+        result.skipped++;
+        this.logger.warn(`SKIP REASON: Failed to process meeting (caught exception)`, {
+          meetingId: meeting.id,
+          meetingTitle: meeting.title,
+          error: error instanceof Error ? error.message : String(error),
+          errorType: error instanceof Error ? error.constructor.name : typeof error,
+          filePath: filePath
+        });
       }
     }
   }

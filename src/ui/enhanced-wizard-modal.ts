@@ -60,12 +60,23 @@ export class EnhancedSetupWizard extends Modal {
         title: 'Connect to Granola',
         description: 'Automatically connect to your local Granola installation.',
         validate: async () => {
-          // Check if we have a valid token
-          const hasValidToken = this.plugin.tokenManager?.hasTokens() || 
-                               (this.settings.apiKey && this.settings.apiKey.trim().length > 0);
+          // Check if we have a valid token in our local settings (not just token manager)
+          const hasValidToken = (this.settings.apiKey && this.settings.apiKey.trim().length > 0) ||
+                               this.plugin.tokenManager?.hasTokens();
           
           if (!hasValidToken) {
             return { valid: false, error: 'No connection established. Please ensure Granola is installed and you are logged in.' };
+          }
+          
+          // Actually test the connection to make sure it works
+          try {
+            const isConnected = await this.plugin.granolaService.testConnection();
+            if (!isConnected) {
+              return { valid: false, error: 'Connection test failed. Please check your connection and try again.' };
+            }
+          } catch (error) {
+            console.error('[Granola Plugin Debug] Connection validation error:', error);
+            return { valid: false, error: 'Failed to test connection. Please try again.' };
           }
           
           return { valid: true };
@@ -300,13 +311,15 @@ export class EnhancedSetupWizard extends Modal {
         console.log('[Granola Plugin Debug] Connection test result:', connected);
         
         if (connected) {
-          // Success! Initialize token manager
-          if (!this.plugin.tokenManager) {
-            this.plugin.tokenManager = new TokenManager(this.plugin, this.logger);
-            await this.plugin.tokenManager.initialize();
-          }
-          
+          // Success! Token manager is already initialized by service registry
+          // Just update our local settings
           this.settings.apiKey = tokenInfo.accessToken;
+          
+          // Update the plugin's granolaService immediately so validation will pass
+          this.plugin.granolaService.updateConfig({ 
+            apiKey: tokenInfo.accessToken,
+            granolaVersion: tokenInfo.granolaVersion 
+          });
           
           statusText.setText('✅ Connected successfully!');
           
@@ -452,15 +465,37 @@ export class EnhancedSetupWizard extends Modal {
     new Setting(container)
       .setName('Folder Organization')
       .setDesc('How to organize meeting notes within your folder')
-      .addDropdown(dropdown => dropdown
-        .addOption('flat', '📄 All in one folder')
-        .addOption('by-date', '📅 Date-based subfolders')
-        .addOption('mirror-granola', '🔄 Mirror Granola folders')
-        .setValue(this.settings.folderOrganization || 'flat')
-        .onChange(value => {
-          this.settings.folderOrganization = value as any;
-          this.updateOrganizationPreview(container);
-        }));
+      .addDropdown(dropdown => {
+        dropdown
+          .addOption('flat', '📄 All in one folder')
+          .addOption('by-date', '📅 Date-based subfolders')
+          .addOption('mirror-granola', '🔄 Mirror Granola folders (Not available)')
+          .setValue(this.settings.folderOrganization || 'flat')
+          .onChange(value => {
+            // Don't allow selecting mirror-granola
+            if (value === 'mirror-granola') {
+              dropdown.setValue(this.settings.folderOrganization || 'flat');
+              new Notice('This option is not yet available due to Granola API limitations');
+              return;
+            }
+            this.settings.folderOrganization = value as any;
+            this.updateOrganizationPreview(container);
+          });
+        // Disable the mirror-granola option
+        const selectEl = dropdown.selectEl;
+        const mirrorOption = selectEl.querySelector('option[value="mirror-granola"]') as HTMLOptionElement;
+        if (mirrorOption) {
+          mirrorOption.disabled = true;
+        }
+        return dropdown;
+      });
+    
+    // Add alert about the limitation
+    const alert = container.createDiv('setting-alert');
+    alert.createEl('p', { 
+      text: '⚠️ Note: "Mirror Granola folders" is not available yet due to limitations from Granola\'s API.',
+      cls: 'mod-warning'
+    });
     
     // Organization preview
     const preview = container.createDiv('organization-preview');

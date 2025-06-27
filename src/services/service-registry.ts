@@ -76,7 +76,7 @@ export class ServiceRegistry {
     
     // Initialize sync engine
     const pathGenerator = this.getOrCreate('pathGenerator', () => 
-      new PathGenerator(() => settings)
+      new PathGenerator(() => (this.plugin as any).settings)
     );
     const syncEngine = this.getOrCreate('syncEngine', () => 
       new SyncEngine(
