@@ -3,7 +3,7 @@ import { EnhancedGranolaService } from './enhanced-granola-service';
 import { PathGenerator } from '../utils/path-generator';
 import { FileManager } from '../utils/file-manager';
 import { MarkdownBuilder } from '../utils/markdown-builder';
-import { SyncResult, SyncProgress, Meeting, SyncError, DocumentPanel } from '../types';
+import { SyncResult, SyncProgress, Meeting, SyncError, DocumentPanel, PluginSettings } from '../types';
 import { Plugin, TFile } from 'obsidian';
 import { Logger } from '../utils/logger';
 import { ChunkedContentProcessor } from '../utils/chunked-processor';
@@ -32,7 +32,7 @@ export class SyncEngine {
     private stateManager: EnhancedStateManager,
     private granolaService: EnhancedGranolaService,
     private pathGenerator: PathGenerator,
-    private plugin: Plugin,
+    private plugin: Plugin & { settings: PluginSettings },
     private logger: Logger
   ) {
     this.fileManager = new FileManager(plugin, logger);
@@ -259,6 +259,7 @@ export class SyncEngine {
     for (let i = 0; i < meetings.length; i++) {
       const meeting = meetings[i];
       const currentIndex = startIndex + i;
+      let filePath: string | undefined;
       
       try {
         this.updateProgress(
@@ -345,7 +346,7 @@ export class SyncEngine {
         }
         
         // Generate file path
-        const filePath = this.pathGenerator.generatePath(meeting);
+        filePath = this.pathGenerator.generatePath(meeting);
         const existingPath = this.stateManager.getFilePath(meeting.id);
         
         this.logger.info(`Processing meeting: ${meeting.title} (ID: ${meeting.id})`);
@@ -640,7 +641,7 @@ export class SyncEngine {
         granolaId: meeting.id,
         localPath: existingPath,
         description: 'Local file has been deleted',
-        remoteModifiedTime: new Date(meeting.updatedAt || meeting.createdAt).getTime()
+        remoteModifiedTime: new Date(meeting.updatedAt || meeting.date).getTime()
       };
     }
     
@@ -654,7 +655,7 @@ export class SyncEngine {
         localPath: existingPath,
         description: 'Local file has been modified since last sync',
         userModifiedTime: file.stat.mtime,
-        remoteModifiedTime: new Date(meeting.updatedAt || meeting.createdAt).getTime()
+        remoteModifiedTime: new Date(meeting.updatedAt || meeting.date).getTime()
       };
     }
     

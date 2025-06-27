@@ -8,7 +8,7 @@ export class PanelProcessor {
   constructor(private logger: StructuredLogger) {
     this.turndownService = new TurndownService({
       headingStyle: 'atx',
-      bulletListMarker: '•',
+      bulletListMarker: '-',
       codeBlockStyle: 'fenced'
     });
     

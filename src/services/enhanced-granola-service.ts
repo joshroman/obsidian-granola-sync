@@ -1,4 +1,4 @@
-import { Meeting, DocumentPanel, DocumentPanelsResponse } from '../types';
+import { Meeting, DocumentPanel, DocumentPanelsResponse, TranscriptSegment } from '../types';
 import { StructuredLogger } from '../utils/structured-logger';
 import { PerformanceMonitor } from '../utils/performance-monitor';
 import { ErrorTracker } from '../utils/error-tracker';
@@ -36,13 +36,14 @@ export class EnhancedGranolaService {
     private errorTracker: ErrorTracker
   ) {
     this.config = {
-      baseUrl: 'https://api.granola.ai',
-      timeout: 30000,
-      maxRetries: 3,
-      retryDelay: 1000,
-      headers: {},
-      ...config
-    };
+      apiKey: config.apiKey,
+      baseUrl: config.baseUrl || 'https://api.granola.ai',
+      timeout: config.timeout || 30000,
+      maxRetries: config.maxRetries || 3,
+      retryDelay: config.retryDelay || 1000,
+      headers: config.headers || {},
+      granolaVersion: config.granolaVersion || '6.4.0'
+    } as Required<APIConfig>;
   }
 
   /**

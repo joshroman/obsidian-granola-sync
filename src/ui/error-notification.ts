@@ -102,7 +102,9 @@ export class ErrorNotificationManager {
       });
     
     // Show notice
-    new Notice(container, 0); // 0 = no auto-dismiss
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(container);
+    new Notice(fragment, 0); // 0 = no auto-dismiss
   }
 
   /**
@@ -149,7 +151,9 @@ export class ErrorNotificationManager {
       }
     }
     
-    new Notice(container, 5000);
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(container);
+    new Notice(fragment, 5000);
   }
 
   /**

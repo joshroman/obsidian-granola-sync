@@ -1,5 +1,5 @@
 import { Modal, App, ProgressBarComponent, ButtonComponent } from 'obsidian';
-import { HardenedSyncEngine } from '../services/hardened-sync-engine';
+import { SyncEngine } from '../services/sync-engine';
 
 export interface SyncProgress {
   current: number;
@@ -11,7 +11,7 @@ export interface SyncProgress {
 }
 
 export class EnhancedSyncProgressModal extends Modal {
-  private syncEngine: HardenedSyncEngine;
+  private syncEngine: SyncEngine;
   private progressBar: ProgressBarComponent | null = null;
   private statusEl: HTMLElement | null = null;
   private statsEl: HTMLElement | null = null;
@@ -21,7 +21,7 @@ export class EnhancedSyncProgressModal extends Modal {
   private startTime: number = Date.now();
   private phaseStartTimes: Record<string, number> = {};
   
-  constructor(app: App, syncEngine: HardenedSyncEngine) {
+  constructor(app: App, syncEngine: SyncEngine) {
     super(app);
     this.syncEngine = syncEngine;
   }
