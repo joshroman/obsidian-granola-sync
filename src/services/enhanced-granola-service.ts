@@ -427,7 +427,7 @@ export class EnhancedGranolaService {
           method,
           headers,
           throw: false, // Don't throw on HTTP errors, we'll handle them
-          contentType: null // Important: Don't let Obsidian guess charset to avoid buffer corruption
+          contentType: undefined // Important: Don't let Obsidian guess charset to avoid buffer corruption
         };
         
         // Only add body if it's explicitly provided (not undefined)
@@ -588,7 +588,7 @@ export class EnhancedGranolaService {
                 return JSON.parse(text);
               } catch (textError) {
                 console.error('[Granola Plugin Debug] Plain text decode also failed:', textError);
-                throw new Error(`Failed to process response: ${decompressError.message}`);
+                throw new Error(`Failed to process response: ${decompressError instanceof Error ? decompressError.message : String(decompressError)}`);
               }
             }
           }
