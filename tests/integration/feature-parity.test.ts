@@ -193,11 +193,12 @@ describe('Feature Parity E2E Tests', () => {
     const content = await saveMeetingToVault(meetingWithPanels!);
     
     // Verify panel content is present
-    expect(content).toContain('## Panel:'); // Should have panel sections
-    expect(content).toMatch(/Introduction:|Agenda Items:|Key Decisions:|Action Items:|Meeting Narrative:|Summary:/); // At least one panel section
+    // Panels can be rendered as "## Panel: Title" or directly as "## Section Name" for multi-section panels
+    expect(content).toMatch(/## (Panel:|Introduction|Agenda Items|Key Decisions|Action Items|Meeting Narrative|Summary)/); // Should have panel sections
     
     // Verify the content is not empty placeholders
-    const panelSections = content.match(/## Panel: .+?\n([\s\S]+?)(?=\n## |$)/g);
+    // Match both "## Panel: Title" and direct section headers like "## Introduction"
+    const panelSections = content.match(/## (?:Panel: .+?|(?:Introduction|Agenda Items|Key Decisions|Action Items|Meeting Narrative|Summary))\n([\s\S]+?)(?=\n## |$)/g);
     expect(panelSections).not.toBeNull();
     expect(panelSections!.length).toBeGreaterThan(0);
     
