@@ -958,14 +958,14 @@ export class EnhancedSetupWizard extends Modal {
     
     if (this.settings.autoSync) {
       const interval = this.settings.syncInterval || 900000;
-      const intervalText = {
+      const intervalText: Record<number, string> = {
         300000: 'every 5 minutes',
         900000: 'every 15 minutes',
         1800000: 'every 30 minutes',
         3600000: 'every hour'
       };
       settingsList.createEl('li', { 
-        text: `✓ Auto-sync enabled (${intervalText[interval]})` 
+        text: `✓ Auto-sync enabled (${intervalText[interval] || 'custom interval'})` 
       });
     }
     
@@ -977,8 +977,9 @@ export class EnhancedSetupWizard extends Modal {
   }
 
   private async nextStep(skip: boolean = false): Promise<void> {
-    if (!skip && this.steps[this.currentStep].validate) {
-      const validation = await this.steps[this.currentStep].validate();
+    const currentStepConfig = this.steps[this.currentStep];
+    if (!skip && currentStepConfig && currentStepConfig.validate) {
+      const validation = await currentStepConfig.validate();
       if (!validation.valid) {
         new Notice(validation.error || 'Please complete this step before continuing');
         return;
