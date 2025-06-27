@@ -81,7 +81,7 @@ describe("Clean Sync After Fix", () => {
     expect(allFiles.length).toBe(5);
     
     // All should be in date folder
-    expect(allFiles.every(f => f.path.includes("2025-06-24"))).toBeTruthy();
+    expect(allFiles.every((f: any) => f.path.includes("2025-06-24"))).toBeTruthy();
     
     // Check that each file contains only one meeting
     for (const file of allFiles) {

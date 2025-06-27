@@ -33,7 +33,7 @@ describe("Append Mode Bug Investigation", () => {
     const filesAfterFirst = await browser.execute(() => {
       // @ts-ignore
       const vault = window.app.vault;
-      return vault.getFiles().map((f: any) => f.path);
+      return vault.getFiles().map((f: TFile) => f.path);
     });
     console.log("Files after first sync:", filesAfterFirst);
 
@@ -122,11 +122,11 @@ describe("Append Mode Bug Investigation", () => {
 
     // Modify the file locally
     const filePath = "Meetings/2025-06-25/2025-06-25 Conflict Test Meeting -- -conflict.md";
-    await browser.execute(async (path) => {
+    await browser.execute(async (path: string) => {
       // @ts-ignore
       const vault = window.app.vault;
       const file = vault.getAbstractFileByPath(path);
-      if (file) {
+      if (file instanceof TFile) {
         const content = await vault.read(file);
         await vault.modify(file, content + "\n\n## Local Notes\nAdded by user");
       }
