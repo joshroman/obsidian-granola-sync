@@ -16,18 +16,22 @@ export const DEFAULT_TEST_SETTINGS: PluginSettings = {
   dateFolderFormat: 'daily',
   weekFormat: 'yyyy-[W]ww',
   lastSync: '',
-  syncAutomatically: false,
+  autoSync: false,
+  syncInterval: 900000,
+  showProgress: true,
+  onlyCompletedMeetings: false,
+  completedMeetingGraceMinutes: 5,
+  batchSize: 10,
+  requestTimeout: 30000,
+  granolaConsentGiven: false,
+  useManualToken: false,
   debugMode: false,
-  chunkSize: 10,
-  syncDirection: 'granolaToObsidian',
-  conflictResolution: 'keepBoth',
-  lastSyncedMeetingDate: '',
-  customDateFormat: '',
-  includeTranscript: true,
-  includeHighlights: true,
-  includeAttendees: true,
-  templatePath: '',
-  syncDeletedMeetings: false
+  logLevel: 'error',
+  wizardCompleted: true,
+  templateFilterEnabled: false,
+  templateFilterName: '',
+  onlyCustomTemplates: false,
+  includeTranscripts: true
 };
 
 // Meeting factory

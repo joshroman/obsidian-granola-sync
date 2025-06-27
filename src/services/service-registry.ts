@@ -22,7 +22,7 @@ export class ServiceRegistry {
   private services: Map<string, any> = new Map();
   private cleanupCallbacks: Map<string, () => void> = new Map();
   
-  constructor(private plugin: Plugin) {}
+  constructor(private plugin: Plugin & { settings: PluginSettings }) {}
   
   /**
    * Initialize all core services

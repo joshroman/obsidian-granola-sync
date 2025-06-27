@@ -136,7 +136,7 @@ export default class GranolaSyncPlugin extends Plugin {
     }
     
     // Set up automatic sync if enabled
-    if (this.settings.syncAutomatically) {
+    if (this.settings.autoSync) {
       this.startAutoSync();
     }
     
