@@ -187,6 +187,7 @@ export class Modal {
     };
     
     (el as any).createDiv = (options?: any) => (el as any).createEl('div', options);
+    (el as any).createSpan = (options?: any) => (el as any).createEl('span', options);
   }
   
   open() {
@@ -293,6 +294,7 @@ export class PluginSettingTab {
     };
     
     (el as any).createDiv = (options?: any) => (el as any).createEl('div', options);
+    (el as any).createSpan = (options?: any) => (el as any).createEl('span', options);
   }
   
   display() {}
@@ -348,6 +350,48 @@ export class ProgressBarComponent {
   
   setValue(value: number) {
     this.progressBar.style.width = `${value}%`;
+  }
+}
+
+// Mock ButtonComponent
+export class ButtonComponent {
+  private containerEl: HTMLElement;
+  private buttonEl: HTMLButtonElement;
+  
+  constructor(containerEl: HTMLElement) {
+    this.containerEl = containerEl;
+    this.buttonEl = document.createElement('button');
+    this.containerEl.appendChild(this.buttonEl);
+  }
+  
+  setButtonText(text: string) {
+    this.buttonEl.textContent = text;
+    return this;
+  }
+  
+  setCta() {
+    this.buttonEl.classList.add('mod-cta');
+    return this;
+  }
+  
+  setWarning() {
+    this.buttonEl.classList.add('mod-warning');
+    return this;
+  }
+  
+  setDisabled(disabled: boolean) {
+    this.buttonEl.disabled = disabled;
+    return this;
+  }
+  
+  onClick(callback: (evt: MouseEvent) => void) {
+    this.buttonEl.addEventListener('click', callback);
+    return this;
+  }
+  
+  removeCta() {
+    this.buttonEl.classList.remove('mod-cta');
+    return this;
   }
 }
 

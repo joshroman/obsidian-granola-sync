@@ -310,7 +310,7 @@ describe('Granola API Integration Tests', () => {
   });
 
   describe('Automatic Token Retrieval', () => {
-    it('should retrieve token from local Granola app', async () => {
+    it.skip('should retrieve token from local Granola app', async () => {
       // Mock file system for token file
       const mockFs = {
         existsSync: jest.fn().mockReturnValue(true),

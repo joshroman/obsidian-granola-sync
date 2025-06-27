@@ -53,7 +53,7 @@ describe('Timezone Handling E2E Tests', () => {
 
       // Should use local date for filename
       expect(env.vault.create).toHaveBeenCalledWith(
-        expect.stringMatching(/2024-03-20.*UTC Meeting\.md$/),
+        expect.stringMatching(/2024-03-20.*UTC Meeting -- \w+\.md$/),
         expect.any(String)
       );
     });
@@ -374,7 +374,7 @@ describe('Timezone Handling E2E Tests', () => {
 
       // Should use custom date format
       expect(env.vault.create).toHaveBeenCalledWith(
-        expect.stringMatching(/05-03-2024.*Custom Format Meeting\.md$/),
+        expect.stringMatching(/05-03-2024.*Custom Format Meeting -- \w+\.md$/),
         expect.any(String)
       );
     });

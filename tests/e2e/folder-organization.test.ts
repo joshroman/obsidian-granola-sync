@@ -56,11 +56,11 @@ describe('Folder Organization E2E Tests', () => {
       // Verify files created in flat structure
       // Note: Date may vary by timezone
       expect(env.vault.create).toHaveBeenCalledWith(
-        expect.stringMatching(/^Meetings\/2024-03-(19|20) Team Standup\.md$/),
+        expect.stringMatching(/^Meetings\/2024-03-(19|20) Team Standup -- \w+\.md$/),
         expect.any(String)
       );
       expect(env.vault.create).toHaveBeenCalledWith(
-        expect.stringMatching(/^Meetings\/2024-03-(20|21) Client Meeting\.md$/),
+        expect.stringMatching(/^Meetings\/2024-03-(20|21) Client Meeting -- \w+\.md$/),
         expect.any(String)
       );
     });
@@ -110,15 +110,15 @@ describe('Folder Organization E2E Tests', () => {
 
       // Verify files in correct folders
       expect(env.vault.create).toHaveBeenCalledWith(
-        'Meetings/2024-03-20/2024-03-20 Morning Meeting.md',
+        expect.stringMatching(/^Meetings\/2024-03-20\/2024-03-20 Morning Meeting -- \w+\.md$/),
         expect.any(String)
       );
       expect(env.vault.create).toHaveBeenCalledWith(
-        'Meetings/2024-03-20/2024-03-20 Afternoon Meeting.md',
+        expect.stringMatching(/^Meetings\/2024-03-20\/2024-03-20 Afternoon Meeting -- \w+\.md$/),
         expect.any(String)
       );
       expect(env.vault.create).toHaveBeenCalledWith(
-        'Meetings/2024-03-21/2024-03-21 Next Day Meeting.md',
+        expect.stringMatching(/^Meetings\/2024-03-21\/2024-03-21 Next Day Meeting -- \w+\.md$/),
         expect.any(String)
       );
     });
@@ -166,15 +166,15 @@ describe('Folder Organization E2E Tests', () => {
 
       // Verify files in correct weekly folders
       expect(env.vault.create).toHaveBeenCalledWith(
-        expect.stringMatching(/^Meetings\/2024-W12\/2024-03-18 Week 12 Monday\.md$/),
+        expect.stringMatching(/^Meetings\/2024-W12\/2024-03-18 Week 12 Monday -- \w+\.md$/),
         expect.any(String)
       );
       expect(env.vault.create).toHaveBeenCalledWith(
-        expect.stringMatching(/^Meetings\/2024-W12\/2024-03-22 Week 12 Friday\.md$/),
+        expect.stringMatching(/^Meetings\/2024-W12\/2024-03-22 Week 12 Friday -- \w+\.md$/),
         expect.any(String)
       );
       expect(env.vault.create).toHaveBeenCalledWith(
-        expect.stringMatching(/^Meetings\/2024-W13\/2024-03-25 Week 13 Monday\.md$/),
+        expect.stringMatching(/^Meetings\/2024-W13\/2024-03-25 Week 13 Monday -- \w+\.md$/),
         expect.any(String)
       );
     });
@@ -234,19 +234,19 @@ describe('Folder Organization E2E Tests', () => {
 
       // Verify files in mirrored structure
       expect(env.vault.create).toHaveBeenCalledWith(
-        'Meetings/Work/ProjectA/2024-03-20 Project A Meeting.md',
+        expect.stringMatching(/^Meetings\/Work\/ProjectA\/2024-03-20 Project A Meeting -- \w+\.md$/),
         expect.any(String)
       );
       expect(env.vault.create).toHaveBeenCalledWith(
-        'Meetings/Work/ProjectB/2024-03-20 Project B Meeting.md',
+        expect.stringMatching(/^Meetings\/Work\/ProjectB\/2024-03-20 Project B Meeting -- \w+\.md$/),
         expect.any(String)
       );
       expect(env.vault.create).toHaveBeenCalledWith(
-        'Meetings/Personal/2024-03-20 Personal Meeting.md',
+        expect.stringMatching(/^Meetings\/Personal\/2024-03-20 Personal Meeting -- \w+\.md$/),
         expect.any(String)
       );
       expect(env.vault.create).toHaveBeenCalledWith(
-        'Meetings/2024-03-20 No Folder Meeting.md',
+        expect.stringMatching(/^Meetings\/2024-03-20 No Folder Meeting -- \w+\.md$/),
         expect.any(String)
       );
     });
@@ -327,7 +327,7 @@ describe('Folder Organization E2E Tests', () => {
 
       // Verify filename without date prefix
       expect(env.vault.create).toHaveBeenCalledWith(
-        'Meetings/Weekly Review.md',
+        expect.stringMatching(/^Meetings\/Weekly Review -- \w+\.md$/),
         expect.any(String)
       );
     });
@@ -359,7 +359,7 @@ describe('Folder Organization E2E Tests', () => {
 
       // Verify custom date format
       expect(env.vault.create).toHaveBeenCalledWith(
-        'Meetings/20-03-2024 Team Meeting.md',
+        expect.stringMatching(/^Meetings\/20-03-2024 Team Meeting -- \w+\.md$/),
         expect.any(String)
       );
     });
@@ -392,7 +392,7 @@ describe('Folder Organization E2E Tests', () => {
 
       // Verify initial file was created
       expect(env.vault.create).toHaveBeenCalledWith(
-        'Meetings/2024-03-20 Team Meeting.md',
+        expect.stringMatching(/^Meetings\/2024-03-20 Team Meeting -- \w+\.md$/),
         expect.any(String)
       );
 
@@ -405,14 +405,14 @@ describe('Folder Organization E2E Tests', () => {
 
       // Mock the existing file for file checks
       const existingFile = { 
-        path: 'Meetings/2024-03-20 Team Meeting.md',
+        path: 'Meetings/2024-03-20 Team Meeting -- 1.md',
         vault: env.vault,
-        name: '2024-03-20 Team Meeting.md'
+        name: '2024-03-20 Team Meeting -- 1.md'
       };
       
       // Set up vault mocks for the second sync
       env.vault.getAbstractFileByPath = jest.fn().mockImplementation((path: string) => {
-        if (path === 'Meetings/2024-03-20 Team Meeting.md') {
+        if (path.match(/^Meetings\/2024-03-20 Team Meeting -- \w+\.md$/)) {
           return existingFile;
         }
         if (path === 'Meetings/2024-03-20') {
@@ -452,7 +452,7 @@ describe('Folder Organization E2E Tests', () => {
       if ((env.vault.create as jest.Mock).mock.calls.length > 0) {
         // Current behavior: file is created in new location, not moved
         expect(env.vault.create).toHaveBeenCalledWith(
-          'Meetings/2024-03-20/2024-03-20 Team Meeting.md',
+          expect.stringMatching(/^Meetings\/2024-03-20\/2024-03-20 Team Meeting -- \w+\.md$/),
           expect.any(String)
         );
         expect(env.vault.createFolder).toHaveBeenCalledWith('Meetings/2024-03-20');

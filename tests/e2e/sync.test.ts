@@ -55,14 +55,14 @@ Meeting content here.`
     const syncPromise = plugin.plugin.performSync();
     
     // Advance timers to process any pending operations
-    jest.runAllTimers();
+    jest.advanceTimersByTime(1000);
     
     await syncPromise;
     
     // Assert: Verify no duplicate was created
     const files = plugin.mockApp.vault.getMarkdownFiles();
     expect(files).toHaveLength(1);
-    expect(files[0].path).toBe('Meetings/2024-03-20 Important Meeting.md');
+    expect(files[0].path).toMatch(/^Meetings\/2024-03-20 Important Meeting/); // Allow for unique suffix
     
     // Verify vault.create was not called (file already exists)
     expect(plugin.mockApp.vault.create).not.toHaveBeenCalled();
@@ -114,7 +114,7 @@ Meeting content here.`
     const syncPromise = plugin.plugin.performSync();
     
     // Advance timers to process any pending operations
-    jest.runAllTimers();
+    jest.advanceTimersByTime(1000);
     
     await syncPromise;
     

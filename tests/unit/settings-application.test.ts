@@ -32,7 +32,7 @@ describe('Settings Application Tests', () => {
       
       const path = pathGenerator.generatePath(testMeeting);
       
-      expect(path).toContain('2025-06-26 Team Planning Meeting.md');
+      expect(path).toContain('2025-06-26 Team Planning Meeting -- ');
     });
 
     it('should exclude date prefix and add unique suffix when disabled', () => {
@@ -41,7 +41,7 @@ describe('Settings Application Tests', () => {
       const path = pathGenerator.generatePath(testMeeting);
       
       expect(path).not.toContain('2025-06-26');
-      expect(path).toContain('Team Planning Meeting [g-123abc].md');
+      expect(path).toContain('Team Planning Meeting -- g-123abc.md');
     });
   });
 
@@ -94,7 +94,7 @@ describe('Settings Application Tests', () => {
       
       const path = pathGenerator.generatePath(testMeeting);
       
-      expect(path).toBe('My Notes/Project Alpha/Team Planning Meeting [g-123abc].md');
+      expect(path).toBe('My Notes/Project Alpha/Team Planning Meeting -- g-123abc.md');
     });
 
     it('should handle special characters in paths', () => {
@@ -108,7 +108,7 @@ describe('Settings Application Tests', () => {
       // Should sanitize special characters
       expect(path).not.toContain(':');
       expect(path).toContain('Project Alpha/Beta'); // Slashes are preserved in folder structure
-      expect(path).toContain('Meeting @ 1000 AM [g-123abc].md');
+      expect(path).toContain('Meeting @ 1000 AM -- g-123abc.md');
     });
   });
 
