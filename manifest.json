@@ -1,9 +1,9 @@
 {
-  "id": "granola-sync",
-  "name": "Granola Sync",
-  "version": "0.0.1",
-  "minAppVersion": "0.15.0",
-  "description": "Proof of concept for Granola meeting sync",
+  "id": "obsidian-granola-sync",
+  "name": "Granola Sync (Unofficial)",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "UNOFFICIAL: Sync your Granola meeting notes to Obsidian. Uses undocumented APIs that may break. macOS only tested.",
   "author": "Josh Roman",
   "authorUrl": "https://github.com/joshroman",
   "isDesktopOnly": true

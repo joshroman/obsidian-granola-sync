@@ -1,0 +1,109 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: npm test
+    
+    - name: Build plugin
+      run: npm run build
+    
+    - name: Create styles.css
+      run: |
+        cat styles/*.css > styles.css
+    
+    - name: Package plugin
+      run: |
+        mkdir -p obsidian-granola-sync
+        cp main.js manifest.json styles.css obsidian-granola-sync/
+        zip -r obsidian-granola-sync-${{ github.ref_name }}.zip obsidian-granola-sync
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref_name }}
+        body: |
+          ## What's Changed
+          
+          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+          
+          ## Installation
+          
+          ### From Obsidian
+          1. Open Settings → Community Plugins
+          2. Search for "Granola Sync"
+          3. Click Install
+          
+          ### Manual Installation
+          1. Download `obsidian-granola-sync-${{ github.ref_name }}.zip` below
+          2. Extract to your vault's `.obsidian/plugins/` folder
+          3. Reload Obsidian
+          4. Enable the plugin in Settings → Community Plugins
+        draft: false
+        prerelease: false
+    
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./obsidian-granola-sync-${{ github.ref_name }}.zip
+        asset_name: obsidian-granola-sync-${{ github.ref_name }}.zip
+        asset_content_type: application/zip
+    
+    - name: Upload main.js
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./main.js
+        asset_name: main.js
+        asset_content_type: application/javascript
+    
+    - name: Upload manifest.json
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./manifest.json
+        asset_name: manifest.json
+        asset_content_type: application/json
+    
+    - name: Upload styles.css
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./styles.css
+        asset_name: styles.css
+        asset_content_type: text/css

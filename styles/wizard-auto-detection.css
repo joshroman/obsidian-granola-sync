@@ -1,0 +1,142 @@
+/* Auto-detection specific styles for setup wizard */
+
+.consent-prompt {
+  text-align: center;
+  padding: 1.5em;
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+  margin: 1em 0;
+}
+
+.consent-info {
+  font-size: 1.1em;
+  margin-bottom: 1.5em;
+  line-height: 1.5;
+}
+
+.auto-connection-status h4 {
+  text-align: center;
+  margin-bottom: 1em;
+}
+
+.status-message {
+  text-align: center;
+  font-size: 1.1em;
+  margin: 1em 0;
+}
+
+.success-info {
+  background-color: rgba(var(--color-green-rgb), 0.1);
+  border: 1px solid rgba(var(--color-green-rgb), 0.3);
+  border-radius: 6px;
+  padding: 1em;
+  margin: 1em 0;
+}
+
+.version-info {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.experimental-warning {
+  background-color: rgba(var(--color-orange-rgb), 0.1);
+  border: 1px solid rgba(var(--color-orange-rgb), 0.3);
+  border-radius: 6px;
+  padding: 1em;
+  margin: 1em 0;
+}
+
+.warning-text {
+  font-size: 0.9em;
+  margin: 0;
+  color: var(--text-warning);
+}
+
+.connection-error h4 {
+  color: var(--text-error);
+  margin-bottom: 1em;
+}
+
+.error-message {
+  background-color: rgba(var(--color-red-rgb), 0.1);
+  border: 1px solid rgba(var(--color-red-rgb), 0.3);
+  border-radius: 6px;
+  padding: 1em;
+  margin: 1em 0;
+  color: var(--text-error);
+}
+
+.error-help {
+  margin: 1em 0;
+}
+
+.error-help ul {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.error-help li {
+  margin: 0.3em 0;
+}
+
+.manual-configuration {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 1.5em;
+  margin: 1em 0;
+}
+
+.manual-configuration h4 {
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+
+.button-container {
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+  margin: 1.5em 0;
+  flex-wrap: wrap;
+}
+
+.button-container button {
+  min-width: 140px;
+  padding: 0.5em 1em;
+}
+
+.back-to-auto {
+  margin-top: 1em;
+  background: none;
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  font-size: 0.9em;
+  padding: 0.3em 0.8em;
+}
+
+.back-to-auto:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* Connection status in wizard */
+.wizard-step .connection-status {
+  margin-top: 1em;
+  padding: 0.8em;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.status-testing {
+  color: var(--text-muted);
+}
+
+.status-success {
+  color: var(--color-green);
+  background-color: rgba(var(--color-green-rgb), 0.1);
+}
+
+.status-error {
+  color: var(--color-red);
+  background-color: rgba(var(--color-red-rgb), 0.1);
+}
