@@ -10,7 +10,8 @@
   "scripts": {
     "build": "esbuild src/main.ts --bundle --external:obsidian --outfile=main.js --target=es2018 --format=cjs --platform=node",
     "dev": "npm run build -- --watch",
-    "test": "npm run test:unit && npm run test:e2e",
+    "test": "npm run test:unit",
+    "test:all": "npm run test:unit && npm run test:e2e",
     "test:unit": "jest",
     "test:unit:watch": "jest --watch",
     "test:unit:coverage": "jest --coverage",

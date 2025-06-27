@@ -33,13 +33,19 @@ jobs:
     - name: Type Check
       run: npm run typecheck
     
-    - name: Run tests with coverage
-      run: npm test -- --coverage --ci
+    - name: Build
+      run: npm run build
+    
+    - name: Run unit tests with coverage
+      run: npm run test:unit -- --coverage --ci
       env:
         TZ: UTC
     
-    - name: Build
-      run: npm run build
+    - name: Run E2E tests
+      if: matrix.os != 'windows-latest'  # Skip E2E on Windows for now
+      run: npm run test:e2e
+      env:
+        TZ: UTC
     
     - name: Verify build output
       run: |
