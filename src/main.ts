@@ -9,6 +9,12 @@ import { EnhancedGranolaService } from './services/enhanced-granola-service';
 import { StructuredLogger } from './utils/structured-logger';
 import { PerformanceMonitor } from './utils/performance-monitor';
 import { ErrorTracker } from './utils/error-tracker';
+import { EnhancedStateManager } from './services/enhanced-state-manager';
+import { SyncEngine } from './services/sync-engine';
+import { Logger } from './utils/logger';
+import { ErrorHandler } from './utils/error-handler';
+import { TokenManager } from './services/token-manager';
+import { PanelProcessor } from './services/panel-processor';
 
 export default class GranolaSyncPlugin extends Plugin {
   settings!: PluginSettings;
@@ -19,16 +25,16 @@ export default class GranolaSyncPlugin extends Plugin {
   private statusBarItem: HTMLElement | null = null;
   
   // Service accessor properties
-  get stateManager() { return this.serviceRegistry.get('stateManager')!; }
-  get syncEngine() { return this.serviceRegistry.get('syncEngine')!; }
-  get granolaService() { return this.serviceRegistry.get('granolaService')!; }
-  get logger() { return this.serviceRegistry.get('logger')!; }
-  get errorHandler() { return this.serviceRegistry.get('errorHandler')!; }
-  get tokenManager() { return this.serviceRegistry.get('tokenManager'); }
-  get performanceMonitor() { return this.serviceRegistry.get('performanceMonitor')!; }
-  get errorTracker() { return this.serviceRegistry.get('errorTracker')!; }
-  get structuredLogger() { return this.serviceRegistry.get('structuredLogger')!; }
-  get panelProcessor() { return this.serviceRegistry.get('panelProcessor')!; }
+  get stateManager() { return this.serviceRegistry.get<EnhancedStateManager>('stateManager')!; }
+  get syncEngine() { return this.serviceRegistry.get<SyncEngine>('syncEngine')!; }
+  get granolaService() { return this.serviceRegistry.get<EnhancedGranolaService>('granolaService')!; }
+  get logger() { return this.serviceRegistry.get<Logger>('logger')!; }
+  get errorHandler() { return this.serviceRegistry.get<ErrorHandler>('errorHandler')!; }
+  get tokenManager() { return this.serviceRegistry.get<TokenManager>('tokenManager'); }
+  get performanceMonitor() { return this.serviceRegistry.get<PerformanceMonitor>('performanceMonitor')!; }
+  get errorTracker() { return this.serviceRegistry.get<ErrorTracker>('errorTracker')!; }
+  get structuredLogger() { return this.serviceRegistry.get<StructuredLogger>('structuredLogger')!; }
+  get panelProcessor() { return this.serviceRegistry.get<PanelProcessor>('panelProcessor')!; }
   
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
