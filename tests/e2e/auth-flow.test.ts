@@ -1,33 +1,18 @@
 import { TestPlugin, mockGranolaAPI } from '../setup/test-environment';
-
-// Create a mock for testConnection that we can track
-const mockTestConnection = jest.fn();
-
-// Mock the EnhancedGranolaService constructor
-jest.mock('../../src/services/enhanced-granola-service', () => {
-  return {
-    EnhancedGranolaService: jest.fn().mockImplementation(() => ({
-      testConnection: mockTestConnection,
-      getAllMeetings: jest.fn().mockResolvedValue([]),
-      getMeetingsSince: jest.fn().mockResolvedValue([])
-    }))
-  };
-});
+import { requestUrl } from 'obsidian';
 
 describe('Granola Sync E2E - Authentication Flow', () => {
   let plugin: TestPlugin;
   
   beforeEach(async () => {
-    // Reset the mock before each test
-    mockTestConnection.mockReset();
-    mockTestConnection.mockResolvedValue(true);
-    
     plugin = new TestPlugin();
     await plugin.setup();
   });
   
   afterEach(async () => {
     await plugin.teardown();
+    // Restore the original mock
+    jest.restoreAllMocks();
   });
   
   describe('API key validation', () => {
@@ -142,10 +127,21 @@ describe('Granola Sync E2E - Authentication Flow', () => {
   describe('Connection error handling', () => {
     test('should handle 401 unauthorized error', async () => {
       // Arrange
-      mockTestConnection.mockReset();
-      mockTestConnection.mockRejectedValue(
-        new Error('401 Unauthorized')
-      );
+      // Clear existing mock and set up new implementation
+      (requestUrl as jest.Mock).mockClear();
+      (requestUrl as jest.Mock).mockImplementation((options: any) => {
+        // Return 401 error for requests with invalid-key
+        if (options.headers?.Authorization === 'Bearer invalid-key') {
+          throw new Error('401 Unauthorized');
+        }
+        // Return success for other requests (like setup)
+        return Promise.resolve({
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+          json: {},
+          text: '{}'
+        });
+      });
       
       // Act
       const result = await plugin.plugin.validateApiKey('invalid-key');
