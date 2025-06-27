@@ -1,13 +1,18 @@
 import { Modal, App, ProgressBarComponent, ButtonComponent } from 'obsidian';
 import { SyncEngine } from '../services/sync-engine';
 
+// Use SyncProgress from types/index.ts but create enhanced type for modal
+import { SyncProgress as BaseSyncProgress } from '../types/index';
+
+// Enhanced progress type for modal display
 export interface SyncProgress {
   current: number;
   total: number;
   message: string;
-  phase: 'idle' | 'fetching' | 'processing' | 'complete';
-  startTime: number;
-  estimatedTimeRemaining: number;
+  currentFile?: string;
+  phase: 'idle' | 'fetching' | 'processing' | 'writing' | 'complete'; // Always required in modal
+  startTime: number; // Always required as number in modal
+  estimatedTimeRemaining: number; // Always required in modal
 }
 
 export class EnhancedSyncProgressModal extends Modal {
@@ -83,7 +88,15 @@ export class EnhancedSyncProgressModal extends Modal {
   }
 
   private updateProgress(): void {
-    const progress = this.syncEngine.getProgress();
+    const baseProgress = this.syncEngine.getProgress();
+    
+    // Convert base progress to enhanced progress with defaults
+    const progress: SyncProgress = {
+      ...baseProgress,
+      phase: baseProgress.phase || 'idle',
+      startTime: baseProgress.startTime ? baseProgress.startTime.getTime() : this.startTime,
+      estimatedTimeRemaining: baseProgress.estimatedTimeRemaining || 0
+    };
     
     // Update progress bar
     if (this.progressBar && progress.total > 0) {
@@ -170,9 +183,10 @@ export class EnhancedSyncProgressModal extends Modal {
     if (!this.detailsEl) return;
     
     // Get additional information from sync engine
-    const perfReport = this.syncEngine.getPerformanceReport();
-    const errorReport = this.syncEngine.getErrorReport();
-    const recoveryStats = this.syncEngine.getRecoveryStats();
+    // TODO: These methods need to be implemented in SyncEngine
+    // const perfReport = this.syncEngine.getPerformanceReport();
+    // const errorReport = this.syncEngine.getErrorReport();
+    // const recoveryStats = this.syncEngine.getRecoveryStats();
     
     this.detailsEl.empty();
     
@@ -188,79 +202,79 @@ export class EnhancedSyncProgressModal extends Modal {
       });
     });
     
-    // Performance metrics
-    if (perfReport.totalOperations > 0) {
-      const perfSection = this.detailsEl.createDiv('detail-section');
-      perfSection.createEl('h4', { text: 'Performance' });
-      const perfList = perfSection.createEl('ul');
-      
-      perfList.createEl('li', { 
-        text: `Average operation: ${perfReport.averageDuration.toFixed(2)}ms`
-      });
-      perfList.createEl('li', { 
-        text: `Slowest operation: ${perfReport.maxDuration.toFixed(2)}ms`
-      });
-      
-      // Top operations by type
-      const topOps = Object.entries(perfReport.operationsByType)
-        .sort((a, b) => b[1].count - a[1].count)
-        .slice(0, 3);
-      
-      if (topOps.length > 0) {
-        const opsList = perfList.createEl('li');
-        opsList.setText('Top operations:');
-        const subList = opsList.createEl('ul');
-        topOps.forEach(([name, data]) => {
-          subList.createEl('li', {
-            text: `${name}: ${data.count} (avg ${data.averageDuration.toFixed(2)}ms)`
-          });
-        });
-      }
-    }
-    
-    // Error summary
-    if (errorReport.totalErrors > 0) {
-      const errorSection = this.detailsEl.createDiv('detail-section');
-      errorSection.createEl('h4', { text: 'Errors', cls: 'error-header' });
-      const errorList = errorSection.createEl('ul');
-      
-      errorList.createEl('li', { 
-        text: `Total errors: ${errorReport.totalErrors}`
-      });
-      
-      // Error types
-      const errorTypes = Object.entries(errorReport.errorsByType)
-        .sort((a, b) => b[1] - a[1]);
-      
-      if (errorTypes.length > 0) {
-        const typesList = errorList.createEl('li');
-        typesList.setText('By type:');
-        const subList = typesList.createEl('ul');
-        errorTypes.forEach(([type, count]) => {
-          subList.createEl('li', { text: `${type}: ${count}` });
-        });
-      }
-    }
-    
-    // Recovery status
-    if (recoveryStats.hasActiveRecovery || recoveryStats.recoveryHistory > 0) {
-      const recoverySection = this.detailsEl.createDiv('detail-section');
-      recoverySection.createEl('h4', { text: 'Recovery' });
-      const recoveryList = recoverySection.createEl('ul');
-      
-      if (recoveryStats.hasActiveRecovery) {
-        recoveryList.createEl('li', { 
-          text: 'Recovery tracking active',
-          cls: 'recovery-active'
-        });
-      }
-      
-      if (recoveryStats.lastRecovery) {
-        recoveryList.createEl('li', { 
-          text: `Last recovery: ${recoveryStats.lastRecovery.toLocaleString()}`
-        });
-      }
-    }
+    // Performance metrics - commented out until methods are implemented
+    // if (perfReport && perfReport.totalOperations > 0) {
+    //   const perfSection = this.detailsEl.createDiv('detail-section');
+    //   perfSection.createEl('h4', { text: 'Performance' });
+    //   const perfList = perfSection.createEl('ul');
+    //   
+    //   perfList.createEl('li', { 
+    //     text: `Average operation: ${perfReport.averageDuration.toFixed(2)}ms`
+    //   });
+    //   perfList.createEl('li', { 
+    //     text: `Slowest operation: ${perfReport.maxDuration.toFixed(2)}ms`
+    //   });
+    //   
+    //   // Top operations by type
+    //   const topOps = Object.entries(perfReport.operationsByType)
+    //     .sort((a, b) => b[1].count - a[1].count)
+    //     .slice(0, 3);
+    //   
+    //   if (topOps.length > 0) {
+    //     const opsList = perfList.createEl('li');
+    //     opsList.setText('Top operations:');
+    //     const subList = opsList.createEl('ul');
+    //     topOps.forEach(([name, data]) => {
+    //       subList.createEl('li', {
+    //         text: `${name}: ${data.count} (avg ${data.averageDuration.toFixed(2)}ms)`
+    //       });
+    //     });
+    //   }
+    // }
+    // 
+    // // Error summary
+    // if (errorReport && errorReport.totalErrors > 0) {
+    //   const errorSection = this.detailsEl.createDiv('detail-section');
+    //   errorSection.createEl('h4', { text: 'Errors', cls: 'error-header' });
+    //   const errorList = errorSection.createEl('ul');
+    //   
+    //   errorList.createEl('li', { 
+    //     text: `Total errors: ${errorReport.totalErrors}`
+    //   });
+    //   
+    //   // Error types
+    //   const errorTypes = Object.entries(errorReport.errorsByType)
+    //     .sort((a, b) => b[1] - a[1]);
+    //   
+    //   if (errorTypes.length > 0) {
+    //     const typesList = errorList.createEl('li');
+    //     typesList.setText('By type:');
+    //     const subList = typesList.createEl('ul');
+    //     errorTypes.forEach(([type, count]) => {
+    //       subList.createEl('li', { text: `${type}: ${count}` });
+    //     });
+    //   }
+    // }
+    // 
+    // // Recovery status
+    // if (recoveryStats && (recoveryStats.hasActiveRecovery || recoveryStats.recoveryHistory > 0)) {
+    //   const recoverySection = this.detailsEl.createDiv('detail-section');
+    //   recoverySection.createEl('h4', { text: 'Recovery' });
+    //   const recoveryList = recoverySection.createEl('ul');
+    //   
+    //   if (recoveryStats.hasActiveRecovery) {
+    //     recoveryList.createEl('li', { 
+    //       text: 'Recovery tracking active',
+    //       cls: 'recovery-active'
+    //     });
+    //   }
+    //   
+    //   if (recoveryStats.lastRecovery) {
+    //     recoveryList.createEl('li', { 
+    //       text: `Last recovery: ${recoveryStats.lastRecovery.toLocaleString()}`
+    //     });
+    //   }
+    // }
   }
 
   private formatDuration(ms: number): string {
