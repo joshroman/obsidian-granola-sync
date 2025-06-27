@@ -358,12 +358,22 @@ describe('Granola API Integration Tests', () => {
 
   describe('Automatic Token Retrieval', () => {
     it('should retrieve token from local Granola app', async () => {
+      // Save original platform
+      const originalPlatform = process.platform;
+      
+      // Mock process.platform
+      Object.defineProperty(process, 'platform', {
+        value: 'darwin',
+        configurable: true
+      });
+      
       // Mock file system for token file
       const mockFs = {
         existsSync: jest.fn().mockReturnValue(true),
         readFileSync: jest.fn().mockReturnValue(JSON.stringify({
           cognito_tokens: JSON.stringify({
             access_token: 'auto-retrieved-token',
+            refresh_token: 'refresh-token-123',
             expires_in: 86400
           }),
           user_info: JSON.stringify({
@@ -388,9 +398,15 @@ describe('Granola API Integration Tests', () => {
       
       const result = TokenRetrievalService.getTokenInfo();
       
+      // Restore original platform
+      Object.defineProperty(process, 'platform', {
+        value: originalPlatform,
+        configurable: true
+      });
+      
       expect(result).not.toBeNull();
       expect(result?.accessToken).toBe('auto-retrieved-token');
-      expect(result?.refreshToken).toBeDefined();
+      expect(result?.refreshToken).toBe('refresh-token-123');
     }, 15000); // 15 second timeout
   });
 });
