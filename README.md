@@ -223,7 +223,7 @@ Enable debug mode in settings to see detailed logs:
 ### File Explorer Display Issues
 If your file explorer shows folders/files in a grid layout instead of a list:
 - This is caused by themes or other plugins modifying the file explorer CSS
-- Use the CSS snippet in `troubleshooting/file-explorer-fixes/file-explorer-layout-fix-granola.css` to fix this issue
+- Use the CSS snippet in `troubleshooting/file-explorer-layout-fix-granola.css` to fix this issue
 
 ## Security & Privacy
 
