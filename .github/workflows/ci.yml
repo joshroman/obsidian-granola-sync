@@ -89,7 +89,7 @@ jobs:
         cp main.js manifest.json styles.css dist/
     
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: obsidian-granola-sync
         path: dist/
