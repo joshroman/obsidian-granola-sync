@@ -208,7 +208,7 @@ describe('Granola API Integration Tests', () => {
   });
 
   describe('Full Sync Flow Integration', () => {
-    it.skip('should successfully sync a meeting to Obsidian vault', async () => {
+    it('should successfully sync a meeting to Obsidian vault', async () => {
       // Create comprehensive test meeting data
       const testMeeting = {
         id: 'full-test-meeting',
@@ -306,11 +306,11 @@ describe('Granola API Integration Tests', () => {
       expect(createdContent).toContain('Duration: 60 minutes');
       expect(createdContent).toContain('#planning');
       expect(createdContent).toContain('#roadmap');
-    });
+    }, 30000); // 30 second timeout
   });
 
   describe('Automatic Token Retrieval', () => {
-    it.skip('should retrieve token from local Granola app', async () => {
+    it('should retrieve token from local Granola app', async () => {
       // Mock file system for token file
       const mockFs = {
         existsSync: jest.fn().mockReturnValue(true),
@@ -344,6 +344,6 @@ describe('Granola API Integration Tests', () => {
       expect(result).not.toBeNull();
       expect(result?.accessToken).toBe('auto-retrieved-token');
       expect(result?.refreshToken).toBeDefined();
-    });
+    }, 15000); // 15 second timeout
   });
 });
