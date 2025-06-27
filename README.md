@@ -2,6 +2,12 @@
 
 Seamlessly sync your Granola meeting notes to Obsidian, keeping all your meeting insights organized and accessible in your personal knowledge base.
 
+> ⚠️ **Important Disclaimers:**
+> - This is an **UNOFFICIAL** plugin not affiliated with or endorsed by Granola
+> - Uses undocumented APIs that **may break without warning** when Granola updates
+> - Currently only tested on **macOS** - Windows/Linux compatibility is unknown
+> - Your API key is stored locally in your vault (never transmitted to third parties)
+
 ## Features
 
 ### 🔄 **Automatic Synchronization**

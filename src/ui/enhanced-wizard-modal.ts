@@ -52,7 +52,7 @@ export class EnhancedSetupWizard extends Modal {
       {
         id: 'welcome',
         title: 'Welcome to Granola Sync',
-        description: 'This wizard will help you set up Granola Sync for Obsidian. We\'ll configure your API connection, choose how to organize your meeting notes, and set up sync preferences.',
+        description: 'This wizard will help you set up Granola Sync for Obsidian. We\'ll configure your API connection, choose how to organize your meeting notes, and set up sync preferences.\n\n⚠️ **Important:** This is an UNOFFICIAL plugin that uses undocumented Granola APIs. It may break without warning when Granola updates. Currently only tested on macOS.',
         canSkip: false
       },
       {

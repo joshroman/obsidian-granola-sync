@@ -15,6 +15,14 @@ export class SettingsTab extends PluginSettingTab {
 
     containerEl.createEl('h2', { text: 'Granola Sync Settings' });
 
+    // Important disclaimers
+    containerEl.createEl('div', {
+      text: '⚠️ IMPORTANT: This is an UNOFFICIAL plugin not affiliated with Granola. ' +
+        'It uses undocumented APIs that may break without warning. ' +
+        'Currently only tested on macOS.',
+      cls: 'setting-item-description mod-warning'
+    });
+
     // Security notice
     const isAutoMode = !this.plugin.settings.useManualToken && this.plugin.settings.granolaConsentGiven;
     if (!isAutoMode) {
