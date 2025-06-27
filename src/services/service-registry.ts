@@ -12,6 +12,7 @@ import { PerformanceMonitor } from '../utils/performance-monitor';
 import { ErrorTracker } from '../utils/error-tracker';
 import { PanelProcessor } from './panel-processor';
 import { PluginSettings } from '../types';
+import { FileLogger } from '../utils/file-logger';
 
 /**
  * Service Registry - Manages lifecycle of all services
@@ -35,6 +36,13 @@ export class ServiceRegistry {
     const structuredLogger = this.getOrCreate('structuredLogger', () => 
       new StructuredLogger('GranolaSync', this.plugin)
     );
+    
+    // Initialize file logger
+    const fileLogger = this.getOrCreate('fileLogger', () => 
+      new FileLogger(this.plugin, structuredLogger)
+    );
+    await fileLogger.initialize();
+    
     const performanceMonitor = this.getOrCreate('performanceMonitor', () => 
       new PerformanceMonitor(new StructuredLogger('PerformanceMonitor', this.plugin))
     );
@@ -97,6 +105,7 @@ export class ServiceRegistry {
     this.registerCleanup('stateManager', () => stateManager.cleanup());
     this.registerCleanup('syncEngine', () => syncEngine.cancelSync());
     this.registerCleanup('fileManager', () => fileManager.cleanup());
+    this.registerCleanup('fileLogger', () => fileLogger.cleanup());
   }
   
   /**

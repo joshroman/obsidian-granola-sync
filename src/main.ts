@@ -15,6 +15,7 @@ import { Logger } from './utils/logger';
 import { ErrorHandler } from './utils/error-handler';
 import { TokenManager } from './services/token-manager';
 import { PanelProcessor } from './services/panel-processor';
+import { FileLogger } from './utils/file-logger';
 
 export default class GranolaSyncPlugin extends Plugin {
   settings!: PluginSettings;
@@ -35,6 +36,7 @@ export default class GranolaSyncPlugin extends Plugin {
   get errorTracker() { return this.serviceRegistry.get<ErrorTracker>('errorTracker')!; }
   get structuredLogger() { return this.serviceRegistry.get<StructuredLogger>('structuredLogger')!; }
   get panelProcessor() { return this.serviceRegistry.get<PanelProcessor>('panelProcessor')!; }
+  get fileLogger() { return this.serviceRegistry.get<FileLogger>('fileLogger')!; }
   
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
@@ -107,6 +109,14 @@ export default class GranolaSyncPlugin extends Plugin {
       callback: async () => {
         await this.granolaService.debugMeetingData();
         new Notice('Check console for meeting data');
+      }
+    });
+    
+    this.addCommand({
+      id: 'granola-export-debug-logs',
+      name: 'Export Debug Logs',
+      callback: async () => {
+        await this.exportDebugLogs();
       }
     });
 
@@ -317,6 +327,23 @@ export default class GranolaSyncPlugin extends Plugin {
       this.logger.info('Sync state reset complete');
     }
     this.updateStatusBar();
+  }
+  
+  async exportDebugLogs() {
+    try {
+      new Notice('📦 Exporting debug logs...');
+      
+      const result = await this.fileLogger.exportLogs();
+      
+      // Open the folder containing the export
+      const { shell } = require('electron');
+      shell.showItemInFolder(result.path);
+      
+      new Notice(`✅ Debug logs exported to: ${result.filename}`);
+    } catch (error) {
+      this.logger.error('Failed to export debug logs', error as Error);
+      new Notice('❌ Failed to export debug logs. Check console for details.');
+    }
   }
   
   private startAutoSync() {

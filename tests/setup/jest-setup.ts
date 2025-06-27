@@ -87,7 +87,7 @@ beforeEach(() => {
   jest.resetModules();
   
   // Advance timers if needed
-  jest.runOnlyPendingTimers();
+  // jest.runOnlyPendingTimers(); // Commented out as it conflicts with file-logger tests
 });
 
 afterEach(() => {
