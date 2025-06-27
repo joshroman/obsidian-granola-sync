@@ -217,8 +217,12 @@ export class MarkdownBuilder {
   
   private static buildPanelSections(panels: DocumentPanel[], panelProcessor?: PanelProcessor): string[] {
     const lines: string[] = [];
-    // Use injected processor or create default
-    const processor = panelProcessor || new PanelProcessor(new StructuredLogger());
+    // If no processor provided, panels cannot be processed
+    if (!panelProcessor) {
+      console.warn('[Granola Plugin Debug] No panel processor provided, skipping panel sections');
+      return lines;
+    }
+    const processor = panelProcessor;
     
     console.log('[Granola Plugin Debug] Processing', panels.length, 'panels');
     for (const panel of panels) {

@@ -196,7 +196,7 @@ export class ErrorHandler {
           return false;
         }
         // Retry server errors and rate limits
-        return errorInfo.code === 429 || (errorInfo.code && errorInfo.code >= 500);
+        return errorInfo.code === 429 || (typeof errorInfo.code === 'number' && errorInfo.code >= 500);
         
       case ErrorType.VALIDATION:
         return false;

@@ -216,8 +216,9 @@ export class ErrorNotificationManager {
       }
       
       if (error.details) {
+        const detailText = `${error.details.type}: ${error.details.message}${error.details.code ? ` (Code: ${error.details.code})` : ''}`;
         detailsEl.createDiv({ 
-          text: error.details,
+          text: detailText,
           cls: 'error-detail'
         });
       }
@@ -240,9 +241,11 @@ export class ErrorNotificationManager {
       });
     }
     
-    // Show notice
+    // Show notice - Notice expects string or DocumentFragment
     const duration = options.duration ?? (options.actions ? 0 : 8000);
-    new Notice(container, duration);
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(container);
+    new Notice(fragment, duration);
     
     // Log the error
     this.logger.info('Error notification shown', {

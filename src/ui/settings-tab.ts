@@ -102,7 +102,7 @@ export class SettingsTab extends PluginSettingTab {
     
     // Determine connection status
     const hasApiKey = !!this.plugin.settings.apiKey || 
-                     (this.plugin.tokenManager?.hasValidToken() ?? false);
+                     (this.plugin.tokenManager?.hasTokens() ?? false);
     
     if (!hasApiKey && !isAutoMode) {
       statusDiv.createEl('span', {
