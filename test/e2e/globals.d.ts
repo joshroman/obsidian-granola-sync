@@ -4,7 +4,9 @@ declare module '@wdio/globals' {
   
   export interface Browser {
     execute<T>(script: string | ((...args: any[]) => T), ...args: any[]): Promise<T>;
+    executeAsync<T>(script: string | ((...args: any[]) => T), ...args: any[]): Promise<T>;
     pause(ms: number): Promise<void>;
+    waitUntil(condition: () => Promise<boolean> | boolean, options?: any): Promise<void>;
   }
 }
 

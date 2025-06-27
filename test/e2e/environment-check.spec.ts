@@ -116,7 +116,7 @@ describe("Test Environment Check", () => {
           timeout: 10000,
           timeoutMsg: 'Obsidian app did not become available'
         }
-      ).catch(err => {
+      ).catch((err: any) => {
         console.error("Wait failed:", err.message);
         return false;
       });

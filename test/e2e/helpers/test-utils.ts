@@ -17,7 +17,7 @@ export class TestUtils {
    * Get the plugin instance
    */
   static async getPlugin() {
-    return browser.executeAsync((done) => {
+    return browser.executeAsync((done: any) => {
       // @ts-ignore
       const plugin = window.app.plugins.plugins["obsidian-granola-sync"];
       done(plugin);
@@ -28,7 +28,7 @@ export class TestUtils {
    * Get the Obsidian app instance
    */
   static async getApp() {
-    return browser.executeAsync((done) => {
+    return browser.executeAsync((done: any) => {
       // @ts-ignore
       done(window.app);
     });
@@ -63,14 +63,14 @@ export class TestUtils {
       // @ts-ignore
       const plugin = window.app.plugins.plugins["obsidian-granola-sync"];
       // Convert date strings back to Date objects
-      const meetingsWithDates = m.map(meeting => ({
+      const meetingsWithDates = m.map((meeting: any) => ({
         ...meeting,
         date: new Date(meeting.date)
       }));
       plugin.granolaService.getAllMeetings = async () => meetingsWithDates;
       plugin.granolaService.getMeetingsSince = async (since: string) => {
         const sinceDate = new Date(since);
-        return meetingsWithDates.filter(meeting => meeting.date >= sinceDate);
+        return meetingsWithDates.filter((meeting: any) => meeting.date >= sinceDate);
       };
     }, meetings);
   }
@@ -79,7 +79,7 @@ export class TestUtils {
    * Trigger a sync operation and wait for completion
    */
   static async performSync(forceAll: boolean = false) {
-    const result = await browser.executeAsync((force, done) => {
+    const result = await browser.executeAsync((force: any, done: any) => {
       // @ts-ignore
       const plugin = window.app.plugins.plugins["obsidian-granola-sync"];
       plugin.performSync(force).then(done);
@@ -106,12 +106,12 @@ export class TestUtils {
    * Get file content
    */
   static async getFileContent(path: string): Promise<string | null> {
-    return browser.executeAsync(async (p, done) => {
+    return browser.executeAsync(async (p: any, done: any) => {
       // @ts-ignore
       const vault = window.app.vault;
       const file = vault.getAbstractFileByPath(p);
-      if (file && file.extension === 'md') {
-        const content = await vault.read(file);
+      if (file && 'extension' in file && file.extension === 'md') {
+        const content = await vault.read(file as any);
         done(content);
       } else {
         done(null);
@@ -128,8 +128,8 @@ export class TestUtils {
       const vault = window.app.vault;
       const folder = vault.getAbstractFileByPath(path);
       if (folder && 'children' in folder) {
-        return folder.children
-          .filter((f: any) => f.extension === 'md')
+        return (folder as any).children
+          .filter((f: any) => 'extension' in f && f.extension === 'md')
           .map((f: any) => f.path);
       }
       return [];

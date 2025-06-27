@@ -126,9 +126,9 @@ describe("Append Mode Bug Investigation", () => {
       // @ts-ignore
       const vault = window.app.vault;
       const file = vault.getAbstractFileByPath(path);
-      if (file && file.extension === 'md') {
-        const content = await vault.read(file);
-        await vault.modify(file, content + "\n\n## Local Notes\nAdded by user");
+      if (file && 'extension' in file && file.extension === 'md') {
+        const content = await vault.read(file as any);
+        await vault.modify(file as any, content + "\n\n## Local Notes\nAdded by user");
       }
     }, filePath);
 
