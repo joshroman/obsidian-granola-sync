@@ -33,7 +33,7 @@ describe("Append Mode Bug Investigation", () => {
     const filesAfterFirst = await browser.execute(() => {
       // @ts-ignore
       const vault = window.app.vault;
-      return vault.getFiles().map((f: TFile) => f.path);
+      return vault.getFiles().map((f: any) => f.path);
     });
     console.log("Files after first sync:", filesAfterFirst);
 
@@ -82,8 +82,8 @@ describe("Append Mode Bug Investigation", () => {
     expect(allFiles.length).toBe(2);
 
     // Check each file content
-    const file1Path = allFiles.find(f => f.path.includes("Josh - Andrea"))?.path;
-    const file2Path = allFiles.find(f => f.path.includes("DJB Eval"))?.path;
+    const file1Path = allFiles.find((f: any) => f.path.includes("Josh - Andrea"))?.path;
+    const file2Path = allFiles.find((f: any) => f.path.includes("DJB Eval"))?.path;
     
     const file1After = await TestUtils.getFileContent(file1Path!);
     const file2After = await TestUtils.getFileContent(file2Path!);
@@ -126,7 +126,7 @@ describe("Append Mode Bug Investigation", () => {
       // @ts-ignore
       const vault = window.app.vault;
       const file = vault.getAbstractFileByPath(path);
-      if (file instanceof TFile) {
+      if (file && file.extension === 'md') {
         const content = await vault.read(file);
         await vault.modify(file, content + "\n\n## Local Notes\nAdded by user");
       }

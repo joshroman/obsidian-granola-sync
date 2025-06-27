@@ -1,10 +1,12 @@
 // Type definitions for WebdriverIO browser object
 declare module '@wdio/globals' {
-  interface Browser {
+  export const browser: Browser;
+  
+  export interface Browser {
     execute<T>(script: string | ((...args: any[]) => T), ...args: any[]): Promise<T>;
     pause(ms: number): Promise<void>;
   }
 }
 
-// Extend the global browser object
+// Make browser available globally
 declare const browser: import('@wdio/globals').Browser;
