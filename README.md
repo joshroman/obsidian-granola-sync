@@ -19,7 +19,7 @@ Seamlessly sync your Granola meeting notes to Obsidian, keeping all your meeting
 ### 📁 **Flexible Organization**
 - **Flat structure**: All notes in one folder
 - **Date-based**: Organize by daily or weekly folders
-- **Mirror Granola**: Maintain your existing Granola folder structure
+- ~~**Mirror Granola**: Maintain your existing Granola folder structure~~ *(Not yet supported by Granola)*
 - Customizable file naming with date formats
 
 ### ⚡ **Performance & Reliability**
@@ -61,17 +61,11 @@ Seamlessly sync your Granola meeting notes to Obsidian, keeping all your meeting
 
 ### Initial Setup
 1. After enabling the plugin, you'll see the setup wizard
-2. Enter your Granola API key (found in your [Granola settings](https://app.granola.so/settings))
+2. The plugin will automatically detect your Granola API key from your local installation
 3. Choose where to store your meeting notes
 4. Select your preferred organization method
 5. Configure sync preferences
 6. Click "Start Syncing" to begin!
-
-### Finding Your API Key
-1. Log in to [Granola](https://app.granola.so)
-2. Navigate to Settings > API
-3. Copy your API key
-4. Paste it in the plugin settings
 
 ## Configuration
 
@@ -79,18 +73,18 @@ Seamlessly sync your Granola meeting notes to Obsidian, keeping all your meeting
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| API Key | Your Granola API key | Required |
 | Target Folder | Where to store meeting notes | "Meetings" |
 | Folder Organization | How to organize notes | Flat |
 | Include Date in Filename | Add meeting date to filename | Yes |
 | Date Format | Format for dates in filenames | yyyy-MM-dd |
+| Include Full Transcript | Include cleaned transcript in notes | Yes |
+| Auto Sync | Enable automatic synchronization | No |
+| Sync Interval | How often to check for new meetings | 15 minutes |
 
 ### Advanced Settings
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| Auto Sync | Enable automatic synchronization | No |
-| Sync Interval | How often to check for new meetings | 15 minutes |
 | Show Progress | Display detailed sync progress | Yes |
 | Debug Mode | Enable detailed logging | No |
 | Log Level | Verbosity of logs (error/warn/info/debug) | error |
@@ -116,17 +110,7 @@ Meetings/
     └── Project Review.md
 ```
 
-Weekly folders:
-```
-Meetings/
-├── 2024-W12/
-│   ├── Team Standup.md
-│   └── Client Meeting.md
-└── 2024-W13/
-    └── Project Review.md
-```
-
-#### Mirror Granola Structure
+#### ~~Mirror Granola Structure~~ *(Not currently supported due to Granola API limitations)*
 ```
 Meetings/
 ├── Work/
@@ -135,6 +119,7 @@ Meetings/
 └── Personal/
     └── Doctor Appointment.md
 ```
+*Note: This feature would maintain your existing Granola folder hierarchy but is not currently available due to Granola API limitations.*
 
 ## Meeting Note Format
 
@@ -157,9 +142,19 @@ tags:
 ```
 
 ### Content Structure
+
+#### Template-Based Content
+- **Default Template Panels**: Standard Granola sections (Summary, Key Points, etc.)
+- **Custom Template Panels**: When custom templates are applied, their panels appear at the top, followed by default template panels
+- **Multiple Templates**: If multiple templates are used, all panels from each template are included
+
+#### Core Sections
 1. **Summary**: AI-generated meeting summary
-2. **Highlights**: Key points and decisions
-3. **Transcript**: Full meeting transcript (if available)
+2. **Highlights**: Key points and decisions  
+3. **Full Transcript**: Complete meeting transcript with intelligent cleanup:
+   - Removes filler words and false starts
+   - Formats speaker attribution consistently
+   - Corrects obvious transcription errors
 4. **Attendees**: List of participants
 5. **Attachments**: Links to related documents
 
@@ -200,7 +195,7 @@ The plugin detects and handles various conflict scenarios:
 ### Common Issues
 
 #### "Failed to connect to Granola"
-- Verify your API key is correct
+- Ensure Granola is installed and running locally
 - Check your internet connection
 - Ensure Granola services are operational
 
@@ -227,7 +222,7 @@ If your file explorer shows folders/files in a grid layout instead of a list:
 
 ## Security & Privacy
 
-- API keys are stored locally in your vault
+- API keys are automatically detected from your local Granola installation
 - All communication uses HTTPS
 - No data is sent to third parties
 - Meeting content remains private
