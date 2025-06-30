@@ -15,24 +15,26 @@ export class MarkdownBuilder {
   private static buildDefaultContent(meeting: Meeting, panelProcessor?: PanelProcessor): string {
     const lines: string[] = [];
     
+    // Extract date and time components in UTC
+    const dateStr = moment.utc(meeting.date).format('YYYY-MM-DD');
+    const timeStr = moment.utc(meeting.date).format('HH:mm');
+    
     // Frontmatter
     lines.push('---');
     lines.push(`granolaId: "${meeting.id}"`);
     lines.push(`title: "${this.escapeYaml(meeting.title)}"`);
-    lines.push(`date: ${meeting.date.toISOString()}`);
+    lines.push(`date: "${dateStr}"`);
+    lines.push(`time: "${timeStr}"`);
+    lines.push(`type: "meeting"`);
+    lines.push(`daily-note: "[[${dateStr}]]"`);
     
     if (meeting.attendees && meeting.attendees.length > 0) {
       lines.push('attendees:');
       meeting.attendees.forEach(attendee => {
         lines.push(`  - "${this.escapeYaml(attendee)}"`);
       });
-    }
-    
-    if (meeting.tags && meeting.tags.length > 0) {
-      lines.push('tags:');
-      meeting.tags.forEach(tag => {
-        lines.push(`  - "${this.escapeYaml(tag)}"`);
-      });
+    } else {
+      lines.push('attendees: []');
     }
     
     if (meeting.duration) {
@@ -162,11 +164,16 @@ export class MarkdownBuilder {
     
     // Add frontmatter if not present
     if (!content.startsWith('---')) {
+      const dateStr = moment.utc(meeting.date).format('YYYY-MM-DD');
+      const timeStr = moment.utc(meeting.date).format('HH:mm');
       const frontmatter = [
         '---',
         `granolaId: "${meeting.id}"`,
         `title: "${this.escapeYaml(meeting.title)}"`,
-        `date: ${meeting.date.toISOString()}`,
+        `date: "${dateStr}"`,
+        `time: "${timeStr}"`,
+        `type: "meeting"`,
+        `daily-note: "[[${dateStr}]]"`,
         '---',
         ''
       ].join('\n');
@@ -177,17 +184,11 @@ export class MarkdownBuilder {
   }
   
   private static escapeYaml(value: string): string {
-    // Comprehensive YAML escaping
+    // Escape double quotes and single quotes for YAML strings
     return value
       .replace(/\\/g, '\\\\')
       .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/:/g, '\\:')
-      .replace(/>/g, '\\>')
-      .replace(/\|/g, '\\|')
-      .replace(/\*/g, '\\*')
-      .replace(/&/g, '\\&')
-      .replace(/#/g, '\\#');
+      .replace(/'/g, "\\'");
   }
   
   private static formatDuration(minutes: number): string {

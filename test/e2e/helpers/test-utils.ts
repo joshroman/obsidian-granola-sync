@@ -261,4 +261,52 @@ export class TestUtils {
       return match ? parseInt(match[1]) : 0;
     });
   }
+
+  /**
+   * Read a meeting note by its title (without extension)
+   * Handles the filename pattern used by the sync engine
+   */
+  static async readMeetingNote(noteTitle: string): Promise<string> {
+    // First try to find the file in the configured target folder
+    const settings = await browser.execute(() => {
+      // @ts-ignore
+      const plugin = window.app.plugins.plugins["obsidian-granola-sync"];
+      return plugin.settings;
+    });
+    
+    const targetFolder = settings.targetFolder || "Meetings";
+    
+    // List all files in the target folder
+    const filesInFolder = await TestUtils.getFilesInFolder(targetFolder);
+    
+    // Extract the meeting title without the date part if present
+    // Handle patterns like "Meeting Title - 2024-01-15" or just "Meeting Title"
+    let titlePart = noteTitle;
+    const dateMatch = noteTitle.match(/^(.+?)\s*-\s*(\d{4}-\d{2}-\d{2})$/);
+    if (dateMatch) {
+      titlePart = dateMatch[1].trim();
+    }
+    
+    // Look for files that contain the title
+    // The actual pattern is: YYYY-MM-DD Title -- uniqueSuffix.md
+    // Special characters in titles are sanitized
+    const sanitizedTitlePart = titlePart.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim();
+    
+    for (const file of filesInFolder) {
+      const fileName = file.split('/').pop() || '';
+      // Remove the extension and unique suffix
+      const nameWithoutExt = fileName.replace(/\.md$/, '').replace(/\s*--\s*[^-]+$/, '');
+      
+      // Check if this file matches our title (with or without date prefix)
+      // Try both original and sanitized versions
+      if (nameWithoutExt.includes(titlePart) || nameWithoutExt.includes(sanitizedTitlePart)) {
+        const content = await TestUtils.getFileContent(file);
+        if (content !== null) {
+          return content;
+        }
+      }
+    }
+    
+    throw new Error(`Meeting note not found with title: ${noteTitle}. Files found: ${filesInFolder.join(', ')}`);
+  }
 }
