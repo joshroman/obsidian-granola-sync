@@ -148,6 +148,7 @@ export class EnhancedSetupWizard extends Modal {
   private render() {
     const { contentEl } = this;
     contentEl.empty();
+    contentEl.addClass('granola-sync-plugin');
     contentEl.addClass('granola-setup-wizard');
     
     const step = this.steps[this.currentStep];

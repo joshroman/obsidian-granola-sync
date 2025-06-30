@@ -20,6 +20,7 @@ export class GranolaConsentModal extends Modal {
   onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
+    contentEl.addClass('granola-sync-plugin');
     contentEl.addClass('granola-consent-modal');
 
     // Header

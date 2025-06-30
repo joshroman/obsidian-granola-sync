@@ -30,6 +30,7 @@ export class ConflictResolutionModal extends Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
+    contentEl.addClass('granola-sync-plugin');
     contentEl.addClass('granola-conflict-modal');
 
     // Title

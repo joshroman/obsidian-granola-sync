@@ -34,6 +34,7 @@ export class EnhancedSyncProgressModal extends Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
+    contentEl.addClass('granola-sync-plugin');
     contentEl.addClass('granola-sync-modal');
     
     // Title

@@ -53,6 +53,29 @@ export class TestUtils {
         plugin.authService.apiKey = "test-api-key";
       }
     }, settings);
+    
+    // Close any open modals (including wizard)
+    await TestUtils.closeAllModals();
+  }
+  
+  /**
+   * Close all open modals
+   */
+  static async closeAllModals() {
+    await browser.execute(() => {
+      // @ts-ignore
+      const app = window.app;
+      // Close all modals
+      const modals = document.querySelectorAll('.modal-container');
+      modals.forEach(modal => {
+        const closeButton = modal.querySelector('.modal-close-button');
+        if (closeButton instanceof HTMLElement) {
+          closeButton.click();
+        }
+      });
+    });
+    // Wait a bit for modals to close
+    await browser.pause(500);
   }
 
   /**
@@ -134,6 +157,27 @@ export class TestUtils {
       }
       return [];
     }, folderPath);
+  }
+
+  /**
+   * Ensure file explorer is open and ready
+   */
+  static async ensureFileExplorerReady() {
+    await browser.execute(() => {
+      // @ts-ignore
+      const app = window.app;
+      // Get or create file explorer leaf
+      let fileExplorer = app.workspace.getLeavesOfType("file-explorer")[0];
+      if (!fileExplorer) {
+        // Open file explorer in left sidebar
+        app.workspace.getLeftLeaf(false).setViewState({
+          type: "file-explorer",
+          active: true
+        });
+      }
+    });
+    // Wait for file explorer to render
+    await browser.pause(1000);
   }
 
   /**
