@@ -1,0 +1,2 @@
+# This file ensures the test-vault directory is tracked by Git
+# Required for E2E tests to run in CI environments

@@ -1,6 +1,7 @@
 import type { Options } from "@wdio/types";
 import path from "path";
 import { fileURLToPath } from 'url';
+import { ensureTestEnvironment } from './test/e2e/setup/ensure-test-environment.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +58,13 @@ export const config: Options.Testrunner = {
   reporters: ["obsidian"],
   
   // Hooks
+  onPrepare: function (config, capabilities) {
+    // Ensure test environment is properly set up
+    const testVaultPath = path.join(__dirname, "test", "test-vault");
+    console.log(`Validating test environment at: ${testVaultPath}`);
+    ensureTestEnvironment(testVaultPath);
+  },
+  
   beforeSession: function (config, capabilities, specs) {
     console.log(`Testing Obsidian ${capabilities.browserVersion} with specs:`, specs);
   },
