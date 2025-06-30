@@ -2,7 +2,7 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/tests/setup/jest-setup.ts'],
-  testMatch: ['**/*.test.ts'],
+  testMatch: ['**/tests/unit/**/*.test.ts', '**/tests/integration/**/*.test.ts'],
   collectCoverageFrom: ['src/**/*.ts'],
   coverageThreshold: {
     global: {
