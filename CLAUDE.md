@@ -1,108 +1,220 @@
-# CLAUDE.md
+# CLAUDE.md - Project Development Guide
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-This is an Obsidian plugin that syncs meeting data from Granola (a meeting note-taking app) to Obsidian vaults. The plugin is designed to be user-friendly, secure, and performant.
+Obsidian Granola Sync is an open-source plugin that bridges Granola (AI-powered meeting transcription) and Obsidian (personal knowledge management) for knowledge workers who need unified access to their meeting insights. The plugin automatically synchronizes meeting notes from Granola to Obsidian vaults with configurable organization options, preserves meeting metadata, and ensures data integrity while respecting user privacy through a local-first architecture.
+
+## Development Workflow
+
+### For New Features
+
+1. **Check Roadmap**: Review `requirements/ROADMAP.md` for next priority feature
+2. **Create Feature Branch**: `git checkout -b feature/[name]`
+3. **Write E2E Tests First**: Create WebdriverIO tests that define "done"
+4. **Implement Feature**: Follow TDD Red-Green-Refactor cycle
+5. **Push and Wait**: After pushing, MUST wait for GitHub Actions to pass
+6. **Validate Completion**: All E2E tests must pass before marking complete
+7. **Merge**: Only after CI/CD validation succeeds
+
+### For Bug Fixes
+
+1. **Write Failing Test**: Reproduce bug with WebdriverIO E2E test
+2. **Fix Bug**: Make test pass using minimal changes
+3. **Verify No Regressions**: Run full test suite locally
+4. **Push and Wait**: Monitor GitHub Actions for success
+5. **Document**: Update relevant documentation if needed
+
+### CI/CD Synchronization (CRITICAL)
+
+**MANDATORY**: Development must pause after each push until GitHub Actions completes successfully.
+
+```bash
+# After pushing to GitHub
+git push origin <branch>
+
+# MANDATORY: Wait for CI/CD to complete
+# Do NOT continue development until:
+# - All GitHub Actions workflows pass (green checkmarks)
+# - No test failures in CI
+# - Build artifacts generated successfully
+```
+
+## Technical Standards
+
+### Core Stack
+- **Language**: TypeScript 5.x with strict mode
+- **Runtime**: Obsidian Plugin API (Electron-based)
+- **Build**: esbuild for bundling, npm for packages
+- **Testing**: 
+  - Jest 29.x for unit/integration tests
+  - WebdriverIO 9.x with custom Obsidian service for E2E
+- **Platform**: macOS only (current phase)
+- **Minimum Obsidian**: v1.4.0
+
+### Code Quality Standards
+- TypeScript strict mode enabled
+- ESLint + Prettier for consistent formatting
+- Zero errors/warnings policy
+- Comprehensive JSDoc for public methods
+
+### Testing Standards
+- **TDD Workflow**: Red-Green-Refactor cycle
+- **Unit Tests**: Minimum 80% code coverage
+- **E2E Tests**: MANDATORY for all user-facing features
+- **Critical Paths**: 100% coverage (sync engine, conflict resolution)
+
+## Project Structure
+
+```
+obsidian-granola-sync/
+├── requirements/
+│   ├── PRODUCT_REQUIREMENTS.md    # Product vision and goals
+│   ├── TECHNICAL_SPECS.md         # Architecture and standards
+│   └── ROADMAP.md                 # Feature priorities and timeline
+├── src/
+│   ├── main.ts                    # Plugin entry point
+│   ├── services/
+│   │   ├── granola-service.ts     # Granola API client wrapper
+│   │   ├── auth-service.ts        # API key management
+│   │   └── sync-engine.ts         # Core sync orchestration
+│   ├── ui/
+│   │   ├── settings-tab.ts        # Plugin settings interface
+│   │   ├── sync-modal.ts          # Progress display
+│   │   └── wizard-modal.ts        # First-run setup
+│   ├── utils/
+│   │   ├── file-manager.ts        # Vault file operations
+│   │   ├── markdown-builder.ts    # Meeting to markdown conversion
+│   │   ├── template-engine.ts     # Custom template processing
+│   │   └── path-generator.ts      # Dynamic path generation
+│   └── types/
+│       └── index.ts               # TypeScript type definitions
+├── tests/
+│   ├── unit/                      # Jest unit tests
+│   ├── integration/               # Service integration tests
+│   └── e2e/                       # WebdriverIO E2E tests (MANDATORY)
+│       ├── *.test.ts              # Feature test suites
+│       └── setup/                 # Test infrastructure
+├── .github/
+│   └── workflows/                 # CI/CD pipelines
+└── docs/                          # User documentation
+```
 
 ## Development Commands
 
 ```bash
-# Initial setup (if not already done)
-npm init
-npm install --save-dev obsidian @types/node typescript jest @types/jest ts-jest
+# Initial setup
+npm install
 
-# Build TypeScript
+# Build plugin
 npm run build
 
-# Run tests
+# Development mode (watches for changes)
+npm run dev
+
+# Run all tests
 npm test
 
-# Run a single test file
-npm test -- path/to/test.spec.ts
+# Run E2E tests only
+npm run test:e2e
 
-# Start development (watches for changes)
-npm run dev
+# Run specific test
+npm test -- path/to/test.spec.ts
 
 # Lint and format
 npm run lint
 npm run format
+
+# Check TypeScript
+npm run typecheck
 ```
 
-## Architecture
+## Key Patterns
+
+### Error Handling
+```typescript
+type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
+```
+
+### Progress Tracking
+```typescript
+interface Progress {
+  current: number;
+  total: number;
+  message: string;
+}
+```
 
 ### Core Principles
-- **Test-First Development**: Write E2E tests before implementation
-- **Pragmatic Security**: API keys stored locally, clear warnings about data handling
-- **User-Centric Design**: Progress feedback, error recovery, setup wizard
-- **Incremental Delivery**: Ship working features early and often
+- **Batch Processing**: Process meetings in configurable batches (default: 10)
+- **Idempotent Operations**: Sync can be run multiple times safely
+- **User Data Protection**: Never overwrite user modifications without consent
+- **Local-First**: All data stays on user's machine
 
-### Project Structure
-```
-src/
-├── main.ts                 # Plugin entry point, registers commands and settings
-├── services/
-│   ├── granola-service.ts  # Wraps Granola API client
-│   ├── auth-service.ts     # API key storage and validation
-│   └── sync-engine.ts      # Core sync logic with progress tracking
-├── ui/
-│   ├── settings-tab.ts     # Plugin settings interface
-│   ├── sync-modal.ts       # Progress display during sync
-│   └── wizard-modal.ts     # First-run setup experience
-├── utils/
-│   ├── file-manager.ts     # Obsidian vault file operations
-│   ├── markdown-builder.ts # Converts meeting data to markdown
-│   ├── template-engine.ts  # Custom template processing
-│   └── path-generator.ts   # Dynamic path generation based on settings
-└── types/
-    └── index.ts            # TypeScript type definitions
-```
+## Testing Philosophy
 
-### Key Patterns
+**MANDATORY**: Every feature must have WebdriverIO E2E tests that:
 
-1. **Error Handling**: Use Result<T, E> pattern for explicit error handling
-   ```typescript
-   type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
-   ```
+1. Simulate real user interactions
+2. Validate all acceptance criteria
+3. Test edge cases and error handling
+4. Pass before feature is marked complete
+5. Run in CI/CD pipeline
 
-2. **Progress Tracking**: All long operations report progress
-   ```typescript
-   interface Progress {
-     current: number;
-     total: number;
-     message: string;
-   }
-   ```
+Valid, reliable tests are ESSENTIAL for success. Do not force-pass, bypass, or mock tests unless absolutely required. Tests that fail provide crucial information that assists in successful delivery.
 
-3. **Batch Processing**: Process meetings in configurable batches (default: 10)
+## Current Development Status
 
-4. **Idempotent Operations**: Sync can be run multiple times safely
+### Version Status
+- **Current**: v0.9 (pre-release)
+- **Next**: v1.0 - CSS isolation fixes (1-2 days)
+- **Then**: v1.1 - Daily note backlinking (3-5 days)
+- **Future**: User feedback driven
 
-5. **Flexible File Organization**: Supports multiple folder structures
-   - Flat structure (all notes in one folder)
-   - Date-based organization (daily/weekly folders)
-   - Mirror Granola's folder hierarchy
-   - Configurable file naming (with or without date prefix)
+### Completed Features
+- ✅ Core sync engine with incremental updates
+- ✅ Multiple organization methods (flat, date-based)
+- ✅ Conflict resolution with user protection
+- ✅ Template and panel support
+- ✅ Performance optimization for 1000+ meetings
+- ✅ Setup wizard and auto API key detection
+- ✅ Comprehensive error handling
 
-### Testing Strategy
+### In Progress
+- 🔄 CSS scoping fixes for v1.0 release
 
-Valid, reliable tests are ESSENTIAL for success. Do not force-pass, bypass, or mock tests unless absolutely required. Tests that fail provide crucial information that assists in successful delivery, and bypassing tests leads to sub-optimal results or outright project failure.
+### Next Up
+- 📋 Daily note backlinking (v1.1)
+- 📋 Official Granola API migration (when available)
 
-- **E2E Tests First**: Write end-to-end tests that exercise the full plugin
-- **Unit Tests**: Test individual services and utilities
-- **Mock Obsidian API**: Use test fixtures for vault operations
-- **Mock Granola API**: Use test data for API responses
+## Definition of Done
 
-Example test structure:
-```typescript
-// tests/e2e/sync-meetings.spec.ts
-describe('Sync Meetings E2E', () => {
-  it('syncs new meetings to vault', async () => {
-    // Test implementation
-  });
-});
-```
+A feature is ONLY complete when:
+- [ ] All acceptance criteria from ROADMAP.md met
+- [ ] All WebdriverIO E2E tests passing
+- [ ] No regressions in existing tests
+- [ ] Performance benchmarks met (see TECHNICAL_SPECS.md)
+- [ ] CI/CD pipeline passes (GitHub Actions)
+- [ ] Code reviewed (if team > 1)
+- [ ] User documentation updated
+- [ ] No TypeScript/ESLint errors
+
+## Security & Privacy
+
+- **API Keys**: Stored locally in Obsidian plugin data
+- **No Analytics**: Zero telemetry or data collection
+- **HTTPS Only**: All API communications encrypted
+- **Input Validation**: Sanitize all external data
+- **Local-First**: No external servers or cloud storage
+
+## Performance Requirements
+
+| Operation | Meeting Count | Time Limit | Memory Limit |
+|-----------|--------------|------------|--------------|
+| Initial Sync | 100 | 30 seconds | 100MB |
+| Initial Sync | 1000 | 5 minutes | 200MB |
+| Incremental | 10 | 5 seconds | 50MB |
 
 ## Obsidian Plugin Specifics
 
@@ -114,81 +226,43 @@ describe('Sync Meetings E2E', () => {
 
 ## Granola API Integration
 
-The plugin integrates with Granola's API (assumed based on implementation plan):
+**Note**: Currently using unofficial API - plan to migrate when official API available
+
 - Authentication via API key
 - Fetch meetings endpoint
 - Rate limiting considerations
 - Error handling for network issues
+- Graceful degradation on API changes
 
-## Security Considerations
+## Quick References
 
-- API keys stored in Obsidian plugin data (local only)
-- No credentials transmitted to third parties
-- Clear warnings when syncing overwrites local files
-- Validation of all external data before processing
+- **Product Vision**: See `requirements/PRODUCT_REQUIREMENTS.md`
+- **Technical Architecture**: See `requirements/TECHNICAL_SPECS.md`
+- **Feature Roadmap**: See `requirements/ROADMAP.md`
+- **User Documentation**: See `README.md`
 
-## Performance Optimizations
+## Phase Completion Process
 
-- Batch processing to avoid UI freezing
-- Progress reporting for user feedback
-- Caching to avoid redundant API calls
-- Efficient markdown generation
+When completing a development phase:
 
-## Development Workflow
-
-### Phase Completion Process
-
-After completing each development phase:
-
-1. **Expert Review with AI Models**
-   - Use Zen MCP server to request code review from o3 and Gemini models
-   - Incorporate feedback on architecture, performance, security, and best practices
-   - Address any edge cases or concerns identified
+1. **Expert Review** (optional)
+   - Use Zen MCP server for code review
+   - Incorporate feedback on architecture and security
+   - Address edge cases identified
 
 2. **Git Commit & Tag**
-   - Create atomic commit with descriptive message for the phase
-   - Tag the commit with phase number (e.g., `phase-1-complete`)
-   - Ensure clean working directory before proceeding
+   - Create atomic commit with descriptive message
+   - Tag if major milestone
+   - Ensure clean working directory
 
-3. **Proceed to Next Phase**
-   - Only continue after addressing review feedback
-   - Document any significant changes or learnings
+3. **Wait for CI/CD**
+   - Push and monitor GitHub Actions
+   - Only proceed after all checks pass
+   - Fix any CI-specific issues immediately
 
-## Project Status
+## Contact & Resources
 
-### Completed Phases (v1.0)
-
-✅ **Phase 0**: Proof of Concept
-✅ **Phase 0.5**: Critical Infrastructure & Junior Dev Setup
-✅ **Phase 1**: Foundation & Testing Framework
-✅ **Phase 2**: Core Sync Engine
-✅ **Phase 3**: Performance & Error Handling
-✅ **Phase 4**: UI/UX Polish
-✅ **Phase 5**: Testing & Edge Cases
-✅ **Phase 6**: Test Rehabilitation
-✅ **Phase 7**: Test Infrastructure & CI/CD (retrospectively added)
-✅ **Phase 8**: Conflict Resolution
-✅ **Phase 9**: Logging & Performance
-✅ **Phase 10**: Sync Engine Hardening
-✅ **Phase 11**: Enhanced UI/UX
-✅ **Phase 12**: Documentation & Release
-
-### Version 2.0 Features (In Progress)
-
-✅ **Phase 13** (formerly duplicate Phase 1): Panel/Template Support with Critical Fixes
-
-### Current Focus: Consolidation Sprint
-
-Before proceeding with new features, we are executing a consolidation sprint to:
-1. Unify multiple sync engine implementations into a single canonical version
-2. Fix all failing tests to achieve 100% pass rate
-3. Ensure all Phase 2 core requirements are solidly implemented
-4. Remove technical debt from rapid feature development
-
-### Next Steps After Consolidation
-
-1. Complete consolidation sprint (3-4 weeks)
-2. Establish quality gates in CI/CD
-3. Beta testing with community
-4. Official v1.0 release to Obsidian Community Plugins
-5. Plan v2.0 feature roadmap
+- **Repository**: github.com/[your-username]/obsidian-granola-sync
+- **Obsidian Forum**: [plugin thread when created]
+- **Issue Tracker**: GitHub Issues
+- **Granola**: granola.ai (unofficial integration)

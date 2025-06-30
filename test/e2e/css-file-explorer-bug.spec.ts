@@ -22,6 +22,9 @@ describe("CSS File Explorer Bug Investigation", () => {
       folderOrganization: "flat",
       includeDateInFilename: true
     });
+    
+    // Ensure file explorer is open and ready
+    await TestUtils.ensureFileExplorerReady();
 
     // Take screenshot before sync
     await browser.saveScreenshot(`./test-screenshots/before-sync.png`);
@@ -80,8 +83,21 @@ describe("CSS File Explorer Bug Investigation", () => {
     // Perform sync
     await TestUtils.performSync(true);
     
+    // Wait for sync to complete and files to be created
+    await browser.pause(3000);
+    
+    // Refresh file explorer to ensure it shows new files
+    await browser.execute(() => {
+      // @ts-ignore
+      const app = window.app;
+      const fileExplorer = app.workspace.getLeavesOfType("file-explorer")[0];
+      if (fileExplorer && fileExplorer.view.requestSort) {
+        fileExplorer.view.requestSort();
+      }
+    });
+    
     // Wait for file explorer to update
-    await browser.pause(2000);
+    await browser.pause(1000);
 
     // Take screenshot after sync
     await browser.saveScreenshot(`./test-screenshots/after-sync.png`);
