@@ -1,7 +1,7 @@
 import type { Options } from "@wdio/types";
 import path from "path";
 import { fileURLToPath } from 'url';
-import { ensureTestEnvironment } from './test/e2e/setup/ensure-test-environment.js';
+const { ensureTestEnvironment } = require('./test/e2e/setup/ensure-test-environment.js');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
