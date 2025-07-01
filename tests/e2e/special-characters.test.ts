@@ -89,13 +89,26 @@ describe('Special Characters and Edge Cases E2E Tests', () => {
       expect(env.vault.create).toHaveBeenCalledTimes(8);
       expect(createdPaths.length).toBe(8);
       
-      // No paths should contain unsafe characters
+      // No paths should contain unsafe characters (they should be replaced with " - ")
       createdPaths.forEach(path => {
-        expect(path).not.toMatch(/[<>:"|?*]/);
+        expect(path).not.toMatch(/[<>:"|?*\\/]/);
         expect(path).not.toContain('\n');
         expect(path).not.toContain('\r');
-        expect(path).not.toContain('\\');
       });
+      
+      // Verify specific expected transformations
+      expect(createdPaths).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('Meeting - Project - Review'),
+          expect.stringContaining('Q&A Session - important'),
+          expect.stringContaining('Budget $1,000 - Planning'),
+          expect.stringContaining('Review - All Tasks'),
+          expect.stringContaining('Question - Answer!'),
+          expect.stringContaining('Quoted - Meeting'),
+          expect.stringContaining('C - Windows - Path'),
+          expect.stringContaining('LineBreakMeeting')
+        ])
+      );
     });
 
     it('should handle Unicode characters', async () => {
@@ -260,8 +273,17 @@ describe('Special Characters and Edge Cases E2E Tests', () => {
       const createdFolders = (env.vault.createFolder as jest.Mock).mock.calls.map(call => call[0]);
       
       createdFolders.forEach(folder => {
-        expect(folder).not.toMatch(/[<>:"|?*]/);
+        expect(folder).not.toMatch(/[<>:"|?*\\/]/);
       });
+      
+      // Verify folder names were properly sanitized
+      expect(createdFolders).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('Work/Project - ABC'),
+          expect.stringContaining('Tasks - Important'),
+          expect.stringContaining('Private - Personal')
+        ])
+      );
     });
   });
 

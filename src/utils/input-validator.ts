@@ -3,7 +3,7 @@ import { Meeting, Attachment } from '../types';
 export class InputValidator {
   private static readonly MAX_PATH_LENGTH = 255;
   private static readonly MAX_TITLE_LENGTH = 200;
-  private static readonly INVALID_PATH_CHARS = /[<>:"|?*\\]/g;
+  private static readonly INVALID_PATH_CHARS = /[<>:"|?*\\/]/g;
   private static readonly WINDOWS_RESERVED = /^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])$/i;
   
   /**
@@ -14,8 +14,15 @@ export class InputValidator {
       return 'Untitled Meeting';
     }
     
-    // Remove invalid characters
-    let safe = title.replace(this.INVALID_PATH_CHARS, '');
+    // Replace invalid characters with dash separator
+    let safe = title.replace(this.INVALID_PATH_CHARS, ' - ');
+    
+    // Clean up multiple consecutive separators, extra spaces, and trim separators
+    safe = safe.replace(/(\s*-\s*)+/g, ' - ')  // Multiple separators become one
+               .replace(/\s+/g, ' ')            // Multiple spaces become one
+               .replace(/^\s*-\s*/, '')         // Remove leading separator
+               .replace(/\s*-\s*$/, '')         // Remove trailing separator
+               .trim();                         // Remove leading/trailing spaces
     
     // Handle leading dots (hidden files on Unix)
     if (safe.startsWith('..')) {
