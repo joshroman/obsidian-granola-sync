@@ -4,6 +4,18 @@
 
 This guide documents the E2E testing infrastructure for the Obsidian Granola Sync plugin. Our E2E tests use WebdriverIO with a custom Obsidian service to test the plugin in a real Obsidian environment.
 
+## Important: E2E Tests in CI
+
+**E2E tests cannot run in standard GitHub Actions** because:
+1. Obsidian is an Electron application that requires a display server
+2. GitHub Actions runners are headless by default
+3. WebdriverIO needs to control the Obsidian GUI
+
+**Current Strategy**:
+- Unit and integration tests run in CI
+- E2E tests must be run locally before merging
+- Consider E2E tests as a pre-merge checklist item
+
 ## Test Architecture
 
 ### Directory Structure
