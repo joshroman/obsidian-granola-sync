@@ -1,0 +1,31 @@
+name: E2E Tests (Local Development)
+
+# This workflow is for reference only - E2E tests must be run locally
+# because they require Obsidian GUI which is not available in GitHub Actions
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  e2e-info:
+    runs-on: ubuntu-latest
+    steps:
+    - name: E2E Test Information
+      run: |
+        echo "❗ E2E tests cannot run in standard GitHub Actions"
+        echo ""
+        echo "E2E tests for Obsidian plugins require:"
+        echo "- A display server (X11/Wayland on Linux, native GUI on macOS/Windows)"
+        echo "- Obsidian application installed"
+        echo "- WebdriverIO with Obsidian service"
+        echo ""
+        echo "To run E2E tests:"
+        echo "1. Clone the repository locally"
+        echo "2. Run: npm install"
+        echo "3. Run: npm run test:e2e"
+        echo ""
+        echo "Alternative CI approaches:"
+        echo "- Use Xvfb (virtual framebuffer) on Linux"
+        echo "- Use specialized CI services with GUI support"
+        echo "- Run tests in Docker with display capabilities"
+        exit 0

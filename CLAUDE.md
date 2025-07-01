@@ -41,6 +41,57 @@ git push origin <branch>
 # - Build artifacts generated successfully
 ```
 
+## Claude Swarm Architecture (CRITICAL)
+
+### Dependency Hierarchy Rules
+
+**FUNDAMENTAL REQUIREMENT**: Claude Swarm configurations MUST NOT have circular dependencies.
+
+#### Hierarchy Structure
+```
+orchestrator (Level 0 - Top)
+├── obsidian_architect (Level 1)
+├── feature_developer (Level 1)  
+├── test_engineer (Level 1)
+├── quality_assurance (Level 1)
+├── sync_specialist (Level 2)
+├── api_specialist (Level 2)
+├── ui_specialist (Level 2)
+└── performance_specialist (Level 2)
+```
+
+#### Connection Rules
+- **Level 0 (Orchestrator)**: Can connect to ALL downstream agents
+- **Level 1 (Core Agents)**: Can connect to Level 2 agents only, NEVER to orchestrator or other Level 1
+- **Level 2 (Specialists)**: Can connect to each other, NEVER to upstream levels
+
+#### Forbidden Patterns
+- ❌ `orchestrator` in any downstream connections array
+- ❌ Level 1 agents connecting to other Level 1 agents  
+- ❌ Level 2 agents connecting to Level 1 or orchestrator
+- ❌ Any bidirectional references (A→B and B→A)
+
+#### Valid Connection Examples
+```yaml
+# ✅ CORRECT: Orchestrator connects downstream
+orchestrator:
+  connections: [obsidian_architect, feature_developer, test_engineer, ...]
+
+# ✅ CORRECT: Level 1 connects to Level 2 only
+feature_developer:
+  connections: [sync_specialist, api_specialist, ui_specialist]
+
+# ✅ CORRECT: Level 2 connects to peers or empty
+sync_specialist:
+  connections: [api_specialist]  # or connections: []
+```
+
+#### Validation
+Before deploying claude-swarm.yml:
+1. Verify NO agent references orchestrator in connections
+2. Verify NO circular dependencies exist
+3. Test with `claude-swarm` command for validation errors
+
 ## Technical Standards
 
 ### Core Stack

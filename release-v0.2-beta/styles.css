@@ -1,0 +1,1253 @@
+/* Granola Sync Plugin Styles - All selectors properly scoped */
+
+/* Conflict Modal Styles */
+.granola-conflict-modal {
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.granola-conflict-modal .conflict-summary {
+  margin-bottom: 20px;
+  padding: 10px;
+  background-color: var(--background-secondary);
+  border-radius: 5px;
+}
+
+.granola-conflict-modal .conflict-list {
+  margin: 20px 0;
+}
+
+.granola-conflict-modal .conflict-item {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 5px;
+  background-color: var(--background-secondary);
+}
+
+.granola-conflict-modal .conflict-header h4 {
+  margin: 0 0 10px 0;
+  color: var(--text-accent);
+}
+
+.granola-conflict-modal .conflict-details {
+  margin-bottom: 10px;
+}
+
+.granola-conflict-modal .conflict-path {
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+  color: var(--text-muted);
+  margin: 5px 0;
+}
+
+.granola-conflict-modal .conflict-description {
+  margin: 10px 0;
+  color: var(--text-normal);
+}
+
+.granola-conflict-modal .conflict-timestamp {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin: 5px 0;
+}
+
+/* Button container - properly scoped to our modals only */
+.granola-conflict-modal .button-container,
+.granola-consent-modal .button-container,
+.granola-setup-wizard .button-container {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.granola-conflict-modal .button-container button,
+.granola-consent-modal .button-container button,
+.granola-setup-wizard .button-container button {
+  padding: 8px 16px;
+}
+
+/* Conflict type indicators */
+.granola-conflict-modal .conflict-item[data-type="user_modified"] .conflict-header {
+  border-left: 3px solid var(--interactive-accent);
+  padding-left: 10px;
+}
+
+.granola-conflict-modal .conflict-item[data-type="both_modified"] .conflict-header {
+  border-left: 3px solid var(--text-error);
+  padding-left: 10px;
+}
+
+.granola-conflict-modal .conflict-item[data-type="file_missing"] .conflict-header {
+  border-left: 3px solid var(--text-warning);
+  padding-left: 10px;
+}
+
+/* Resolution dropdown styling */
+.granola-conflict-modal .conflict-item .setting-item {
+  border-top: 1px solid var(--background-modifier-border);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.granola-conflict-modal .conflict-item .setting-item-control {
+  flex-grow: 0;
+  min-width: 200px;
+}
+
+/* Consent Modal Styles */
+.granola-consent-modal {
+  max-width: 500px;
+}
+
+.granola-consent-modal h2 {
+  margin-bottom: 1em;
+  text-align: center;
+}
+
+.granola-consent-modal h3 {
+  font-size: 1.1em;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.granola-consent-modal .granola-consent-details {
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+  padding: 1em;
+  margin: 1em 0;
+}
+
+.granola-consent-modal .granola-consent-details ul {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.granola-consent-modal .granola-consent-details li {
+  margin: 0.5em 0;
+  line-height: 1.5;
+}
+
+.granola-consent-modal .granola-consent-warning {
+  background-color: var(--background-modifier-error-rgb);
+  background-color: rgba(var(--background-modifier-error-rgb), 0.1);
+  border: 1px solid rgba(var(--background-modifier-error-rgb), 0.3);
+  border-radius: 8px;
+  padding: 1em;
+  margin: 1em 0;
+}
+
+.granola-consent-modal .granola-consent-warning .warning-title {
+  font-weight: bold;
+  margin-bottom: 0.5em;
+  color: var(--text-error);
+}
+
+.granola-consent-modal .granola-consent-warning p:last-child {
+  margin-bottom: 0;
+  font-size: 0.9em;
+}
+
+.granola-consent-modal .granola-consent-privacy {
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+  padding: 1em;
+  margin: 1em 0;
+  font-size: 0.9em;
+}
+
+.granola-consent-modal .granola-consent-privacy p {
+  margin: 0;
+}
+
+.granola-consent-modal .granola-button-container {
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+  margin-top: 1.5em;
+}
+
+.granola-consent-modal .granola-button-container button {
+  min-width: 120px;
+}
+
+/* Error Notifications */
+.granola-error-notification {
+  max-width: 400px;
+}
+
+.granola-error-notification .error-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.granola-error-notification .error-icon {
+  font-size: 1.2em;
+  margin-right: 8px;
+}
+
+.granola-error-notification .error-title {
+  font-weight: 600;
+  color: var(--text-error);
+}
+
+.granola-error-notification .error-message {
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.granola-error-notification .error-details {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--background-modifier-border);
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+.granola-error-notification .error-detail {
+  margin: 4px 0;
+}
+
+.granola-error-notification .error-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.granola-error-notification .error-actions button {
+  font-size: 0.9em;
+  padding: 4px 12px;
+}
+
+/* Error Summary */
+.granola-error-summary {
+  max-width: 450px;
+}
+
+.granola-error-summary .error-summary-title {
+  font-weight: 600;
+  color: var(--text-error);
+  margin-bottom: 12px;
+  font-size: 1.1em;
+}
+
+.granola-error-summary .error-summary-list {
+  margin: 0 0 12px 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.granola-error-summary .error-summary-list li {
+  margin: 8px 0;
+  padding: 8px;
+  background-color: var(--background-secondary);
+  border-radius: 4px;
+}
+
+.granola-error-summary .error-type {
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.granola-error-summary .error-count {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+.granola-error-summary .error-examples {
+  margin-top: 4px;
+  font-size: 0.85em;
+  color: var(--text-muted);
+  padding-left: 12px;
+}
+
+.granola-error-summary .error-example {
+  margin: 2px 0;
+}
+
+.granola-error-summary .error-example-more {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.granola-error-summary .error-summary-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Success Notifications */
+.granola-success-notification {
+  max-width: 350px;
+}
+
+.granola-success-notification .success-message {
+  font-weight: 600;
+  color: var(--text-success);
+  margin-bottom: 8px;
+}
+
+.granola-success-notification .success-details {
+  display: flex;
+  gap: 12px;
+  font-size: 0.9em;
+}
+
+.granola-success-notification .success-stat {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+/* Notice overrides for better styling - scoped to our notifications only */
+.notice.mod-error .granola-error-notification {
+  background-color: var(--background-error);
+  border: 1px solid var(--text-error);
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.notice .granola-success-notification {
+  background-color: var(--background-success);
+  border: 1px solid var(--text-success);
+  padding: 12px;
+  border-radius: 4px;
+}
+
+/* Animation for our notices only - renamed to avoid conflicts */
+@keyframes granola-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.granola-error-notification,
+.granola-success-notification {
+  animation: granola-slide-in 0.3s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 500px) {
+  .granola-error-notification,
+  .granola-error-summary,
+  .granola-success-notification {
+    max-width: 100%;
+  }
+  
+  .granola-error-summary .error-summary-actions,
+  .granola-error-notification .error-actions {
+    flex-direction: column;
+  }
+  
+  .granola-error-summary .error-summary-actions button,
+  .granola-error-notification .error-actions button {
+    width: 100%;
+  }
+}
+
+/* Sync Modal Styles */
+.granola-sync-modal {
+  min-width: 500px;
+  max-width: 600px;
+}
+
+.granola-sync-modal h2 {
+  margin: 0 0 20px 0;
+  font-size: 1.3em;
+  font-weight: 600;
+}
+
+/* Progress Container */
+.granola-sync-modal .sync-progress-container {
+  margin-bottom: 20px;
+}
+
+.granola-sync-modal .sync-progress-container .progress-bar {
+  height: 8px;
+  background-color: var(--background-modifier-border);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.granola-sync-modal .sync-progress-container .progress-bar-fill {
+  height: 100%;
+  background-color: var(--interactive-accent);
+  transition: width 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated stripes for active progress */
+.granola-sync-modal .sync-progress-container .progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.1) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.1) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 20px 20px;
+  animation: granola-progress-stripes 1s linear infinite;
+}
+
+@keyframes granola-progress-stripes {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 20px 0;
+  }
+}
+
+/* Status */
+.granola-sync-modal .sync-status {
+  margin-bottom: 20px;
+  font-size: 0.95em;
+  color: var(--text-normal);
+  text-align: center;
+  padding: 10px;
+  background-color: var(--background-secondary);
+  border-radius: 5px;
+  transition: all 0.3s ease;
+}
+
+.granola-sync-modal .sync-status.phase-fetching {
+  background-color: var(--background-secondary-alt);
+  color: var(--text-accent);
+}
+
+.granola-sync-modal .sync-status.phase-processing {
+  background-color: var(--interactive-accent-hover);
+  color: var(--text-on-accent);
+}
+
+.granola-sync-modal .sync-status.phase-complete {
+  background-color: var(--background-success);
+  color: var(--text-success);
+  font-weight: 600;
+}
+
+/* Statistics Grid */
+.granola-sync-modal .sync-stats {
+  margin-bottom: 20px;
+}
+
+.granola-sync-modal .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.granola-sync-modal .stat-item {
+  background-color: var(--background-secondary);
+  padding: 12px;
+  border-radius: 5px;
+}
+
+.granola-sync-modal .stat-label {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+}
+
+.granola-sync-modal .stat-value {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+/* Details Section */
+.granola-sync-modal .sync-details-container {
+  margin-bottom: 20px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.granola-sync-modal .details-header {
+  padding: 10px 15px;
+  background-color: var(--background-secondary);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.granola-sync-modal .details-header:hover {
+  background-color: var(--background-secondary-alt);
+}
+
+.granola-sync-modal .details-toggle {
+  font-family: var(--font-monospace);
+  margin-right: 8px;
+}
+
+.granola-sync-modal .sync-details {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  background-color: var(--background-primary);
+}
+
+.granola-sync-modal .sync-details-container.expanded .sync-details {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 15px;
+}
+
+.granola-sync-modal .detail-section {
+  margin-bottom: 15px;
+}
+
+.granola-sync-modal .detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.granola-sync-modal .detail-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.granola-sync-modal .detail-section ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+.granola-sync-modal .detail-section li {
+  margin: 4px 0;
+}
+
+.granola-sync-modal .error-header {
+  color: var(--text-error) !important;
+}
+
+.granola-sync-modal .recovery-active {
+  color: var(--text-accent);
+}
+
+/* Footer */
+.granola-sync-modal .sync-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 15px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Completion Animation */
+.granola-sync-modal.sync-complete {
+  animation: granola-pulse-success 0.5s ease;
+}
+
+@keyframes granola-pulse-success {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .granola-sync-modal .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .granola-sync-modal {
+    min-width: auto;
+    max-width: 100%;
+  }
+}
+
+/* Auto-detection specific styles for setup wizard */
+.granola-setup-wizard .consent-prompt {
+  text-align: center;
+  padding: 1.5em;
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+  margin: 1em 0;
+}
+
+.granola-setup-wizard .consent-info {
+  font-size: 1.1em;
+  margin-bottom: 1.5em;
+  line-height: 1.5;
+}
+
+.granola-setup-wizard .auto-connection-status h4 {
+  text-align: center;
+  margin-bottom: 1em;
+}
+
+.granola-setup-wizard .status-message {
+  text-align: center;
+  font-size: 1.1em;
+  margin: 1em 0;
+}
+
+.granola-setup-wizard .success-info {
+  background-color: rgba(var(--color-green-rgb), 0.1);
+  border: 1px solid rgba(var(--color-green-rgb), 0.3);
+  border-radius: 6px;
+  padding: 1em;
+  margin: 1em 0;
+}
+
+.granola-setup-wizard .version-info {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.granola-setup-wizard .experimental-warning {
+  background-color: rgba(var(--color-orange-rgb), 0.1);
+  border: 1px solid rgba(var(--color-orange-rgb), 0.3);
+  border-radius: 6px;
+  padding: 1em;
+  margin: 1em 0;
+}
+
+.granola-setup-wizard .warning-text {
+  font-size: 0.9em;
+  margin: 0;
+  color: var(--text-warning);
+}
+
+.granola-setup-wizard .connection-error h4 {
+  color: var(--text-error);
+  margin-bottom: 1em;
+}
+
+.granola-setup-wizard .error-message {
+  background-color: rgba(var(--color-red-rgb), 0.1);
+  border: 1px solid rgba(var(--color-red-rgb), 0.3);
+  border-radius: 6px;
+  padding: 1em;
+  margin: 1em 0;
+  color: var(--text-error);
+}
+
+.granola-setup-wizard .error-help {
+  margin: 1em 0;
+}
+
+.granola-setup-wizard .error-help ul {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.granola-setup-wizard .error-help li {
+  margin: 0.3em 0;
+}
+
+.granola-setup-wizard .manual-configuration {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 1.5em;
+  margin: 1em 0;
+}
+
+.granola-setup-wizard .manual-configuration h4 {
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+
+.granola-setup-wizard .button-container {
+  display: flex;
+  gap: 1em;
+  justify-content: center;
+  margin: 1.5em 0;
+  flex-wrap: wrap;
+}
+
+.granola-setup-wizard .button-container button {
+  min-width: 140px;
+  padding: 0.5em 1em;
+}
+
+.granola-setup-wizard .back-to-auto {
+  margin-top: 1em;
+  background: none;
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  font-size: 0.9em;
+  padding: 0.3em 0.8em;
+}
+
+.granola-setup-wizard .back-to-auto:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* Connection status in wizard */
+.granola-setup-wizard .wizard-step .connection-status {
+  margin-top: 1em;
+  padding: 0.8em;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.granola-setup-wizard .status-testing {
+  color: var(--text-muted);
+}
+
+.granola-setup-wizard .status-success {
+  color: var(--color-green);
+  background-color: rgba(var(--color-green-rgb), 0.1);
+}
+
+.granola-setup-wizard .status-error {
+  color: var(--color-red);
+  background-color: rgba(var(--color-red-rgb), 0.1);
+}
+
+/* Setup Wizard Base Styles */
+.granola-setup-wizard {
+  width: 500px;
+  max-width: 90vw;
+  height: 600px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.granola-setup-wizard .wizard-header {
+  margin-bottom: 30px;
+}
+
+.granola-setup-wizard .wizard-header h2 {
+  margin: 0 0 20px 0;
+  font-size: 1.5em;
+  font-weight: 600;
+}
+
+/* Progress Bar */
+.granola-setup-wizard .wizard-progress {
+  margin-bottom: 20px;
+}
+
+.granola-setup-wizard .progress-bar {
+  height: 6px;
+  background-color: var(--background-modifier-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.granola-setup-wizard .progress-fill {
+  height: 100%;
+  background-color: var(--interactive-accent);
+  transition: width 0.3s ease;
+}
+
+.granola-setup-wizard .progress-text {
+  margin-top: 8px;
+  font-size: 0.85em;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Content */
+.granola-setup-wizard .wizard-content {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 0;
+}
+
+.granola-setup-wizard .wizard-description {
+  margin-bottom: 20px;
+  line-height: 1.6;
+  color: var(--text-normal);
+}
+
+/* Footer */
+.granola-setup-wizard .wizard-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 1px solid var(--background-modifier-border);
+  gap: 10px;
+  margin-top: auto;
+}
+
+.granola-setup-wizard .wizard-footer .spacer {
+  flex-grow: 1;
+}
+
+/* Button group for Skip/Next buttons */
+.granola-setup-wizard .wizard-footer .button-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Ensure wizard content takes full height */
+.granola-setup-wizard .modal-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Welcome Step Features */
+.granola-setup-wizard .wizard-features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.granola-setup-wizard .feature-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 15px;
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+}
+
+.granola-setup-wizard .feature-icon {
+  font-size: 1.5em;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.granola-setup-wizard .feature-text h4 {
+  margin: 0 0 5px 0;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.granola-setup-wizard .feature-text p {
+  margin: 0;
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+/* API Key Step */
+.granola-setup-wizard .api-key-container {
+  margin-top: 20px;
+}
+
+.granola-setup-wizard .connection-status {
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 0.9em;
+}
+
+.granola-setup-wizard .status-testing {
+  color: var(--text-muted);
+}
+
+.granola-setup-wizard .status-success {
+  color: var(--text-success);
+  background-color: var(--background-success);
+  padding: 8px 12px;
+  border-radius: 5px;
+  display: inline-block;
+}
+
+.granola-setup-wizard .status-error {
+  color: var(--text-error);
+  background-color: var(--background-error);
+  padding: 8px 12px;
+  border-radius: 5px;
+  display: inline-block;
+}
+
+/* Folder Preview */
+.granola-setup-wizard .folder-preview,
+.granola-setup-wizard .organization-preview,
+.granola-setup-wizard .naming-preview {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+}
+
+.granola-setup-wizard .folder-preview h4,
+.granola-setup-wizard .organization-preview h4,
+.granola-setup-wizard .naming-preview h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.granola-setup-wizard .folder-tree {
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+  line-height: 1.8;
+}
+
+/* Tree node structure */
+.granola-setup-wizard .tree-node {
+  position: relative;
+}
+
+.granola-setup-wizard .tree-node-root {
+  padding-left: 0;
+}
+
+.granola-setup-wizard .tree-node-level-1 {
+  padding-left: 1.5em;
+}
+
+.granola-setup-wizard .tree-node-level-2 {
+  padding-left: 3em;
+}
+
+.granola-setup-wizard .tree-node-level-3 {
+  padding-left: 4.5em;
+}
+
+.granola-setup-wizard .tree-item {
+  display: inline-block;
+}
+
+.granola-setup-wizard .tree-node-root .tree-item {
+  font-weight: 600;
+}
+
+.granola-setup-wizard .tree-folder {
+  color: var(--text-accent);
+}
+
+.granola-setup-wizard .tree-file {
+  color: var(--text-normal);
+}
+
+/* Tree connectors */
+.granola-setup-wizard .tree-node-level-1::before,
+.granola-setup-wizard .tree-node-level-2::before,
+.granola-setup-wizard .tree-node-level-3::before {
+  content: '└── ';
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+}
+
+.granola-setup-wizard .tree-node-level-1::before {
+  left: 0.5em;
+}
+
+.granola-setup-wizard .tree-node-level-2::before {
+  left: 2em;
+}
+
+.granola-setup-wizard .tree-node-level-3::before {
+  left: 3.5em;
+}
+
+/* Note about folder restrictions */
+.granola-setup-wizard .folder-note {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: var(--background-modifier-info);
+  border-radius: 5px;
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+/* Section Headers */
+.granola-setup-wizard .section-header {
+  margin-bottom: 20px;
+}
+
+.granola-setup-wizard .section-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+.granola-setup-wizard .section-description {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.95em;
+}
+
+/* Button Toggle Group */
+.granola-setup-wizard .button-toggle-group {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+/* Inline button toggle group for same-line display */
+.granola-setup-wizard .button-toggle-group-inline {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+  width: 100%;
+}
+
+.granola-setup-wizard .button-toggle-group-inline .button-toggle {
+  flex: 1;
+  max-width: 50%;
+}
+
+.granola-setup-wizard .button-toggle {
+  flex: 1;
+  padding: 10px 16px;
+  background-color: #e0e0e0;
+  border: 2px solid #d0d0d0;
+  border-radius: 6px;
+  color: #666;
+  font-size: 0.95em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.granola-setup-wizard .button-toggle:hover:not(.active) {
+  background-color: #d0d0d0;
+  border-color: #b0b0b0;
+  color: #333;
+}
+
+.granola-setup-wizard .button-toggle.active {
+  background-color: #4caf50;
+  color: white;
+  border-color: #45a049;
+}
+
+.granola-setup-wizard .button-toggle.active:hover {
+  background-color: #45a049;
+  border-color: #3d8b40;
+}
+
+/* Template explanation */
+.granola-setup-wizard .template-explanation {
+  margin: 15px 0;
+  padding: 10px;
+  background-color: var(--background-secondary);
+  border-radius: 5px;
+}
+
+/* Settings separator */
+.granola-setup-wizard .settings-separator {
+  margin: 30px 0;
+  border: none;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+/* Template Settings */
+.granola-setup-wizard .template-mode-selection {
+  margin-bottom: 20px;
+}
+
+.granola-setup-wizard .template-mode-selection h4 {
+  margin: 0 0 15px 0;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.granola-setup-wizard .radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.granola-setup-wizard .radio-option {
+  display: flex;
+  align-items: flex-start;
+  padding: 15px;
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.granola-setup-wizard .radio-option:has(input:checked) {
+  border-color: var(--interactive-accent);
+}
+
+.granola-setup-wizard .radio-option input[type="radio"] {
+  margin-right: 12px;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.granola-setup-wizard .radio-option label {
+  cursor: pointer;
+  flex-grow: 1;
+}
+
+.granola-setup-wizard .radio-label {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.granola-setup-wizard .radio-description {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Transcript Settings */
+.granola-setup-wizard .transcript-example {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+}
+
+.granola-setup-wizard .transcript-example h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.granola-setup-wizard .transcript-preview {
+  font-family: var(--font-text);
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+
+.granola-setup-wizard .transcript-heading {
+  font-weight: 600;
+  margin: 0 0 10px 0;
+}
+
+.granola-setup-wizard .transcript-line {
+  margin: 5px 0;
+  padding-left: 10px;
+}
+
+.granola-setup-wizard .transcript-note {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: var(--background-modifier-info);
+  border-radius: 5px;
+}
+
+/* Sync Settings */
+.granola-setup-wizard .sync-mode-selection {
+  margin-bottom: 20px;
+}
+
+.granola-setup-wizard .sync-mode-selection h4 {
+  margin: 0 0 15px 0;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.granola-setup-wizard .sync-note {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: var(--background-modifier-info);
+  border-radius: 5px;
+}
+
+/* Disabled dropdown styling */
+.granola-setup-wizard .sync-interval-dropdown select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* File Naming Preview */
+.granola-setup-wizard .filename-examples {
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+  line-height: 1.8;
+}
+
+.granola-setup-wizard .filename-example {
+  padding: 2px 0;
+}
+
+/* Setup Summary */
+.granola-setup-wizard .setup-summary {
+  background-color: var(--background-secondary);
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.granola-setup-wizard .setup-summary h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.2em;
+}
+
+.granola-setup-wizard .setup-summary ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.granola-setup-wizard .setup-summary li {
+  margin: 8px 0;
+  color: var(--text-success);
+}
+
+.granola-setup-wizard .setup-complete-text {
+  text-align: center;
+  font-size: 1.1em;
+  margin-top: 20px;
+}
+
+/* Hide/show elements */
+.granola-setup-wizard .hidden {
+  display: none !important;
+}
+
+/* Alert styling for limitations */
+.granola-setup-wizard .setting-alert {
+  margin-top: 15px;
+  padding: 12px 16px;
+  background-color: rgba(var(--color-yellow-rgb), 0.1);
+  border: 1px solid rgba(var(--color-yellow-rgb), 0.3);
+  border-radius: 6px;
+}
+
+.granola-setup-wizard .setting-alert p {
+  margin: 0;
+  font-size: 0.9em;
+  color: var(--text-warning);
+}
+
+.granola-setup-wizard .setting-alert p.mod-warning {
+  color: var(--text-warning);
+}
+
+/* Disabled option styling */
+.granola-setup-wizard select option[disabled] {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .granola-setup-wizard .wizard-features {
+    grid-template-columns: 1fr;
+  }
+  
+  .granola-setup-wizard {
+    min-width: auto;
+    max-width: 100%;
+  }
+}

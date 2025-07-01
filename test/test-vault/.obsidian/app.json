@@ -1,0 +1,14 @@
+{
+  "legacyEditorDefaultMode": "source",
+  "alwaysUpdateLinks": true,
+  "newFileLocation": "root",
+  "attachmentFolderPath": "./attachments",
+  "useMarkdownLinks": false,
+  "showIndentGuide": true,
+  "strictLineBreaks": false,
+  "readableLineLength": false,
+  "promptDelete": false,
+  "showUnsupportedFiles": true,
+  "defaultViewMode": "source",
+  "livePreview": false
+}
