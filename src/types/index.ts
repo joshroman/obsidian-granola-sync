@@ -94,6 +94,9 @@ export interface PluginSettings {
   debugMode: boolean;
   logLevel: 'error' | 'warn' | 'info' | 'debug';
   
+  // Timezone settings
+  timezone: string; // IANA timezone identifier (e.g., 'America/New_York')
+  
   // Wizard completion tracking
   wizardCompleted: boolean;
   
@@ -124,6 +127,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   useManualToken: false,
   debugMode: false,
   logLevel: 'error',
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   wizardCompleted: false,
   templateFilterEnabled: false,
   templateFilterName: '',

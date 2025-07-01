@@ -15,9 +15,9 @@ export class MarkdownBuilder {
   private static buildDefaultContent(meeting: Meeting, panelProcessor?: PanelProcessor): string {
     const lines: string[] = [];
     
-    // Extract date and time components in UTC
-    const dateStr = moment.utc(meeting.date).format('YYYY-MM-DD');
-    const timeStr = moment.utc(meeting.date).format('HH:mm');
+    // Extract date and time components in local timezone
+    const dateStr = moment(meeting.date).format('YYYY-MM-DD');
+    const timeStr = moment(meeting.date).format('HH:mm');
     
     // Frontmatter
     lines.push('---');
@@ -25,6 +25,7 @@ export class MarkdownBuilder {
     lines.push(`title: "${this.escapeYaml(meeting.title)}"`);
     lines.push(`date: "${dateStr}"`);
     lines.push(`time: "${timeStr}"`);
+    lines.push(`timezone: "${Intl.DateTimeFormat().resolvedOptions().timeZone}"`);
     lines.push(`type: "meeting"`);
     lines.push(`daily-note: "[[${dateStr}]]"`);
     
@@ -164,8 +165,8 @@ export class MarkdownBuilder {
     
     // Add frontmatter if not present
     if (!content.startsWith('---')) {
-      const dateStr = moment.utc(meeting.date).format('YYYY-MM-DD');
-      const timeStr = moment.utc(meeting.date).format('HH:mm');
+      const dateStr = moment(meeting.date).format('YYYY-MM-DD');
+      const timeStr = moment(meeting.date).format('HH:mm');
       const frontmatter = [
         '---',
         `granolaId: "${meeting.id}"`,

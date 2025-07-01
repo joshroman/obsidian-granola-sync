@@ -16,6 +16,7 @@ import { ErrorHandler } from './utils/error-handler';
 import { TokenManager } from './services/token-manager';
 import { PanelProcessor } from './services/panel-processor';
 import { FileLogger } from './utils/file-logger';
+import { PluginValidator } from './utils/plugin-validator';
 
 export default class GranolaSyncPlugin extends Plugin {
   settings!: PluginSettings;
@@ -45,12 +46,33 @@ export default class GranolaSyncPlugin extends Plugin {
   async onload() {
     console.log('Loading Granola Sync plugin');
     
+    
     // Load settings
     await this.loadSettings();
     
     // Initialize service registry
-    this.serviceRegistry = new ServiceRegistry(this);
-    await this.serviceRegistry.initialize(this.settings);
+    try {
+      this.serviceRegistry = new ServiceRegistry(this);
+      await this.serviceRegistry.initialize(this.settings);
+    } catch (error) {
+      console.error('Service registry initialization failed:', error);
+      new Notice('⚠️ Granola Sync: Service initialization failed. Plugin may not work correctly.');
+      // Continue loading - don't fail completely
+    }
+    
+    // Validate plugin initialization (non-blocking)
+    try {
+      const validation = await PluginValidator.validateInitialization(this);
+      if (!validation.allPassed) {
+        console.warn('Plugin validation warnings:', validation.failures);
+        PluginValidator.showValidationResults(validation);
+      }
+    } catch (error) {
+      console.warn('Plugin validation failed, but continuing load:', error);
+    }
+    
+    // Start health monitoring
+    PluginValidator.startHealthMonitoring();
     
     // Add settings tab
     this.addSettingTab(new SettingsTab(this.app, this));
@@ -166,6 +188,7 @@ export default class GranolaSyncPlugin extends Plugin {
     
     console.log('Granola Sync plugin unloaded');
   }
+  
   
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());

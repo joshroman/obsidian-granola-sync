@@ -203,6 +203,46 @@ interface Progress {
 - **User Data Protection**: Never overwrite user modifications without consent
 - **Local-First**: All data stays on user's machine
 
+## CRITICAL: Integration Verification Protocol (IVP)
+
+### MANDATORY CHECKS - NO EXCEPTIONS
+
+Before ANY commit claiming a feature is "fixed" or "complete":
+
+1. **INTEGRATION VERIFICATION (MANDATORY)**
+   ```bash
+   # These commands MUST pass:
+   npm run build
+   npm run test:integration-verify
+   npm run test:visual-smoke
+   ```
+
+2. **CSS/STYLE INTEGRATION RULE**
+   - ANY CSS file MUST have corresponding test verifying it's loaded in DOM
+   - ANY styling change MUST have visual regression test
+   - NO style-related PR without DOM injection verification
+
+3. **DEFINITION OF DONE - HARD REQUIREMENTS**
+   - [ ] Feature works in actual Obsidian instance (not just tests pass)
+   - [ ] Integration test verifies all components are loaded/connected
+   - [ ] Visual test captures before/after screenshots
+   - [ ] Manual verification in test vault documented
+
+### TEST PHILOSOPHY CHANGES
+
+**OLD (BROKEN)**: Test that code exists
+**NEW (REQUIRED)**: Test that code WORKS in real environment
+
+**FORBIDDEN PATTERNS**:
+- ❌ Tests that check for absence of problems without verifying solution exists
+- ❌ "Passing by not failing" tests (empty results passing as success)
+- ❌ Mocking away the actual integration points being tested
+
+**MANDATORY PATTERNS**:
+- ✅ Tests that verify actual DOM manipulation occurred
+- ✅ Tests that verify real Obsidian API interactions
+- ✅ Tests that capture visual evidence of working feature
+
 ## Testing Philosophy
 
 **MANDATORY**: Every feature must have WebdriverIO E2E tests that:
@@ -212,8 +252,17 @@ interface Progress {
 3. Test edge cases and error handling
 4. Pass before feature is marked complete
 5. Run in CI/CD pipeline
+6. **VERIFY INTEGRATION**: Test that components are actually loaded and working
 
 Valid, reliable tests are ESSENTIAL for success. Do not force-pass, bypass, or mock tests unless absolutely required. Tests that fail provide crucial information that assists in successful delivery.
+
+## HARD RULE: CSS/UI Changes
+
+ANY change involving CSS, styles, or UI MUST include:
+- [ ] Integration test verifying CSS loads in DOM
+- [ ] Visual screenshot showing the fix works
+- [ ] Manual test in real Obsidian instance
+- [ ] Before/after comparison documented
 
 ## Current Development Status
 

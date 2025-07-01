@@ -1,0 +1,20 @@
+#!/bin/sh
+echo "🔍 Running integration verification..."
+
+# MANDATORY: Build must work
+echo "📦 Building plugin..."
+npm run build || exit 1
+
+# MANDATORY: TypeScript check
+echo "🔍 Checking TypeScript..."
+npm run typecheck || exit 1
+
+# MANDATORY: Integration tests must pass  
+echo "🧪 Running integration verification tests..."
+npm run test:integration-verify || exit 1
+
+# MANDATORY: Visual smoke test
+echo "📸 Running visual smoke tests..."
+npm run test:visual-smoke || exit 1
+
+echo "✅ All integration checks passed - commit allowed"

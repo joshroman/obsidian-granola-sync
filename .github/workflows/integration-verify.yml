@@ -1,0 +1,149 @@
+name: Integration Verification
+on: 
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  integration-verify:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      # CRITICAL: Build must work
+      - name: Build plugin
+        run: npm run build
+      
+      # CRITICAL: TypeScript must compile
+      - name: TypeScript check
+        run: npm run typecheck
+      
+      # CRITICAL: Unit tests
+      - name: Run unit tests
+        run: npm run test:unit
+      
+      # Install Obsidian for integration testing
+      - name: Install Obsidian
+        run: |
+          wget -O obsidian.deb https://github.com/obsidianmd/obsidian-releases/releases/download/v1.4.16/obsidian_1.4.16_amd64.deb
+          sudo dpkg -i obsidian.deb || true
+          sudo apt-get install -f -y
+      
+      # Setup virtual display for GUI tests
+      - name: Setup virtual display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1024x768x24 &
+          sleep 3
+        
+      # CRITICAL: Integration verification tests
+      - name: Run integration verification
+        env:
+          DISPLAY: :99
+        run: |
+          npm run test:integration-verify
+        timeout-minutes: 10
+      
+      # CRITICAL: Visual smoke tests
+      - name: Run visual smoke tests
+        env:
+          DISPLAY: :99
+        run: |
+          npm run test:visual-smoke
+        timeout-minutes: 5
+      
+      # CRITICAL: Visual regression comparison
+      - name: Visual regression check
+        run: npm run test:visual-compare
+        continue-on-error: true
+        id: visual-check
+      
+      # Upload screenshots as artifacts
+      - name: Upload test screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-screenshots
+          path: test-screenshots/
+          retention-days: 30
+      
+      # Upload build artifacts
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-build
+          path: |
+            main.js
+            manifest.json
+            styles.css
+          retention-days: 7
+      
+      # Fail if visual regression detected
+      - name: Check visual regression results
+        if: steps.visual-check.outcome == 'failure'
+        run: |
+          echo "❌ Visual regression detected!"
+          echo "Review the uploaded screenshots and update baseline if changes are intentional"
+          exit 1
+
+  # Additional job for testing in different environments
+  compatibility-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        obsidian-version: ['1.4.16', '1.5.0']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build plugin
+        run: npm run build
+      
+      - name: Install Obsidian ${{ matrix.obsidian-version }}
+        run: |
+          if [ "${{ matrix.obsidian-version }}" = "1.4.16" ]; then
+            wget -O obsidian.deb https://github.com/obsidianmd/obsidian-releases/releases/download/v1.4.16/obsidian_1.4.16_amd64.deb
+          else
+            wget -O obsidian.deb https://github.com/obsidianmd/obsidian-releases/releases/download/v1.5.0/obsidian_1.5.0_amd64.deb
+          fi
+          sudo dpkg -i obsidian.deb || true
+          sudo apt-get install -f -y
+      
+      - name: Setup virtual display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1024x768x24 &
+          sleep 3
+      
+      - name: Test compatibility
+        env:
+          DISPLAY: :99
+        run: |
+          npm run test:integration-verify
+        timeout-minutes: 8
