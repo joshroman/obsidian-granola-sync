@@ -107,8 +107,8 @@ describe('Settings Application Tests', () => {
       
       // Should sanitize special characters
       expect(path).not.toContain(':');
-      expect(path).toContain('Project Alpha/Beta'); // Slashes are preserved in folder structure
-      expect(path).toContain('Meeting @ 1000 AM -- g-123abc.md');
+      expect(path).toContain('Project - Alpha/Beta'); // Colon sanitized to dash in folder
+      expect(path).toContain('Meeting @ 10 - 00 AM -- g-123abc.md'); // Colon sanitized to dash in filename
     });
   });
 

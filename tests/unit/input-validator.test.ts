@@ -7,12 +7,12 @@ describe('InputValidator', () => {
       expect(result).toBe('Team Standup');
     });
     
-    test('removes invalid path characters', () => {
+    test('replaces invalid path characters with dash separator', () => {
       const input = 'Meeting: Project <Status> | Q&A?';
       const result = InputValidator.validateMeetingTitle(input);
-      expect(result).toBe('Meeting Project Status  Q&A');
+      expect(result).toBe('Meeting - Project - Status - Q&A');
       
-      // Test each invalid character
+      // Test each invalid character gets cleaned up properly (no trailing separators)
       expect(InputValidator.validateMeetingTitle('Test<')).toBe('Test');
       expect(InputValidator.validateMeetingTitle('Test>')).toBe('Test');
       expect(InputValidator.validateMeetingTitle('Test:')).toBe('Test');
@@ -20,6 +20,18 @@ describe('InputValidator', () => {
       expect(InputValidator.validateMeetingTitle('Test|')).toBe('Test');
       expect(InputValidator.validateMeetingTitle('Test?')).toBe('Test');
       expect(InputValidator.validateMeetingTitle('Test*')).toBe('Test');
+      expect(InputValidator.validateMeetingTitle('Test\\')).toBe('Test');
+      
+      // Test the main use case: forward slash  
+      expect(InputValidator.validateMeetingTitle('Meeting with Bob/Jack')).toBe('Meeting with Bob - Jack');
+    });
+    
+    test('cleans up multiple consecutive separators', () => {
+      // Multiple invalid characters become single separator
+      expect(InputValidator.validateMeetingTitle('Test<>:|')).toBe('Test');
+      expect(InputValidator.validateMeetingTitle('Project//Review')).toBe('Project - Review');
+      expect(InputValidator.validateMeetingTitle('Client\\|Server')).toBe('Client - Server');
+      expect(InputValidator.validateMeetingTitle('/Start/Middle\\End|')).toBe('Start - Middle - End');
     });
     
     test('handles Windows reserved names', () => {
@@ -77,7 +89,7 @@ describe('InputValidator', () => {
     
     test('validates folder segments', () => {
       const result = InputValidator.validateFolderPath('Work/Project: Status/Q&A');
-      expect(result).toBe('Work/Project Status/Q&A');
+      expect(result).toBe('Work/Project - Status/Q&A');
     });
     
     test('handles empty segments', () => {
@@ -116,7 +128,7 @@ describe('InputValidator', () => {
       const result = InputValidator.validateMeetingData(input);
       
       expect(result.id).toBe('test-123');
-      expect(result.title).toBe('Meeting Test');
+      expect(result.title).toBe('Meeting - Test');
       expect(result.date).toEqual(new Date('2024-01-15T10:00:00Z'));
       expect(result.attendees).toEqual(['John', 'Jane']);
       expect(result.highlights).toEqual(['Point 1', 'Point 2']);
