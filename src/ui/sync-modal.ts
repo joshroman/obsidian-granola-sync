@@ -46,7 +46,7 @@ export class SyncProgressModal extends Modal {
     
     // Buttons
     const buttonContainer = contentEl.createEl('div', {
-      cls: 'modal-button-container'
+      cls: 'granola-button-container'
     });
     
     this.cancelButton = buttonContainer.createEl('button', {
@@ -58,7 +58,7 @@ export class SyncProgressModal extends Modal {
     });
     
     // Spacer
-    buttonContainer.createEl('div', { cls: 'modal-button-spacer' });
+    buttonContainer.createEl('div', { cls: 'granola-button-spacer' });
     
     this.closeButton = buttonContainer.createEl('button', {
       text: 'Close',
@@ -222,7 +222,7 @@ export class SyncProgressModal extends Modal {
     
     // Close button
     const buttonContainer = contentEl.createEl('div', {
-      cls: 'modal-button-container'
+      cls: 'granola-button-container'
     });
     
     const closeButton = buttonContainer.createEl('button', {
@@ -249,7 +249,7 @@ export class SyncProgressModal extends Modal {
     
     // Close button
     const buttonContainer = contentEl.createEl('div', {
-      cls: 'modal-button-container'
+      cls: 'granola-button-container'
     });
     
     const closeButton = buttonContainer.createEl('button', {

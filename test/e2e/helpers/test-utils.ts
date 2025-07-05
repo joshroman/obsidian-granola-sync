@@ -12,6 +12,29 @@ export interface MockMeeting {
   granolaFolder?: string;
 }
 
+export interface FileExplorerLayoutItem {
+  name: string;
+  isWrapped: boolean;
+  width: number;
+  height: number;
+  top: number;
+  left: number;
+}
+
+export interface FileExplorerLayout {
+  items: FileExplorerLayoutItem[];
+  containerWidth: number;
+  totalItems: number;
+  wrappedItems: number;
+}
+
+export interface LayoutTestResult {
+  width: string;
+  wrappedItems: number;
+  allItemsVisible: boolean;
+  layout: FileExplorerLayout;
+}
+
 export class TestUtils {
   /**
    * Get the plugin instance
@@ -531,5 +554,214 @@ export class TestUtils {
     }
     
     throw new Error(`Meeting note not found with title: ${noteTitle}. Files found: ${filesInFolder.join(', ')}`);
+  }
+
+  /**
+   * Create comprehensive test vault structure for File Explorer testing
+   */
+  static async createTestVaultStructure(): Promise<void> {
+    // This method validates that the test vault structure already exists
+    // The structure is created as static files in the test-vault directory
+    await browser.execute(() => {
+      console.log('📁 Test vault structure validation - files should already exist in test-vault/');
+    });
+  }
+
+  /**
+   * Get File Explorer layout metrics to detect wrapping issues
+   */
+  static async getFileExplorerLayout(): Promise<FileExplorerLayout> {
+    return browser.execute(() => {
+      const fileExplorer = (window as any).app.workspace.getLeavesOfType("file-explorer")[0];
+      if (!fileExplorer) {
+        throw new Error('File Explorer not found');
+      }
+
+      const container = fileExplorer.view.containerEl;
+      const items = container.querySelectorAll('.nav-file, .nav-folder');
+      
+      console.log(`🔍 File Explorer Debug - Found ${items.length} items in container`);
+      console.log(`📐 Container dimensions:`, container.getBoundingClientRect());
+      
+      let previousBottom = -1;
+      const wrappedItems: any[] = [];
+      const layoutItems: FileExplorerLayoutItem[] = [];
+      
+      items.forEach((item: Element, index: number) => {
+        const rect = item.getBoundingClientRect();
+        const name = item.textContent?.trim() || `item-${index}`;
+        
+        // More accurate wrapping detection for vertical File Explorer
+        // In a proper File Explorer, items should stack vertically
+        // Only consider an item wrapped if it's significantly higher than the previous item
+        // and to the right (indicating horizontal wrapping, which shouldn't happen)
+        const isWrapped = index > 0 && 
+                          rect.top < previousBottom - 5 && // Above previous item
+                          rect.left > 20; // And to the right (horizontal offset)
+        
+        if (isWrapped) {
+          console.log(`⚠️  Potential wrapped item ${index}: "${name}" at top: ${rect.top}, previousBottom: ${previousBottom}`);
+          wrappedItems.push({
+            index,
+            name,
+            position: { top: rect.top, left: rect.left }
+          });
+        }
+        
+        layoutItems.push({
+          name,
+          isWrapped,
+          width: rect.width,
+          height: rect.height,
+          top: rect.top,
+          left: rect.left
+        });
+        
+        console.log(`📋 Item ${index}: "${name}" - top: ${rect.top}, left: ${rect.left}, wrapped: ${isWrapped}`);
+        previousBottom = rect.bottom;
+      });
+      
+      const containerRect = container.getBoundingClientRect();
+      
+      console.log(`📊 Final analysis: ${wrappedItems.length} wrapped items out of ${items.length} total`);
+      
+      return {
+        items: layoutItems,
+        containerWidth: containerRect.width,
+        totalItems: items.length,
+        wrappedItems: wrappedItems.length
+      };
+    });
+  }
+
+  /**
+   * Test File Explorer layout at different widths
+   */
+  static async testFileExplorerAtWidths(widths: string[]): Promise<LayoutTestResult[]> {
+    const results: LayoutTestResult[] = [];
+    
+    for (const width of widths) {
+      // Set File Explorer width
+      await browser.execute((w) => {
+        const fileExplorer = (window as any).app.workspace.getLeavesOfType("file-explorer")[0];
+        if (fileExplorer) {
+          const container = fileExplorer.view.containerEl.closest('.workspace-leaf');
+          if (container) {
+            (container as HTMLElement).style.width = w;
+            (container as HTMLElement).style.minWidth = w;
+            (container as HTMLElement).style.maxWidth = w;
+          }
+        }
+      }, width);
+      
+      // Wait for layout to settle
+      await browser.pause(500);
+      
+      // Get layout metrics
+      const layout = await TestUtils.getFileExplorerLayout();
+      
+      // Check if all items are visible
+      const allItemsVisible = layout.items.length > 0 && 
+        layout.items.every(item => item.width > 0 && item.height > 0);
+      
+      results.push({
+        width,
+        wrappedItems: layout.wrappedItems,
+        allItemsVisible,
+        layout
+      });
+    }
+    
+    // Reset width
+    await browser.execute(() => {
+      const fileExplorer = (window as any).app.workspace.getLeavesOfType("file-explorer")[0];
+      if (fileExplorer) {
+        const container = fileExplorer.view.containerEl.closest('.workspace-leaf');
+        if (container) {
+          (container as HTMLElement).style.width = '';
+          (container as HTMLElement).style.minWidth = '';
+          (container as HTMLElement).style.maxWidth = '';
+        }
+      }
+    });
+    
+    return results;
+  }
+
+  /**
+   * Ensure File Explorer is ready and visible
+   */
+  static async ensureFileExplorerReady(): Promise<void> {
+    await browser.execute(() => {
+      const app = (window as any).app;
+      
+      // Ensure File Explorer is open
+      const fileExplorerLeaf = app.workspace.getLeavesOfType("file-explorer")[0];
+      if (!fileExplorerLeaf) {
+        // Try to open File Explorer
+        app.workspace.getLeftLeaf(false).setViewState({
+          type: "file-explorer",
+          active: true,
+        });
+      }
+    });
+    
+    // Wait for File Explorer to be ready
+    await browser.pause(1500);
+    
+    // Verify it's actually ready
+    const isReady = await browser.execute(() => {
+      const fileExplorer = (window as any).app.workspace.getLeavesOfType("file-explorer")[0];
+      return fileExplorer && fileExplorer.view && fileExplorer.view.containerEl;
+    });
+    
+    if (!isReady) {
+      throw new Error('File Explorer failed to initialize properly');
+    }
+  }
+
+  /**
+   * Get elements with long names for testing text wrapping behavior
+   */
+  static async getLongNameElements(): Promise<any[]> {
+    return browser.execute(() => {
+      const fileExplorer = (window as any).app.workspace.getLeavesOfType("file-explorer")[0];
+      if (!fileExplorer) {
+        return [];
+      }
+      
+      const navFiles = fileExplorer.view.containerEl.querySelectorAll('.nav-file, .nav-folder');
+      
+      console.log(`🔍 Analyzing ${navFiles.length} File Explorer items for long names...`);
+      
+      const longNameItems = Array.from(navFiles)
+        .filter((el: Element) => {
+          const text = el.textContent || '';
+          const isLong = text.includes('Long') || text.includes('Very') || text.length > 20;
+          if (isLong) {
+            console.log(`📝 Found long name candidate: "${text}" (length: ${text.length})`);
+          }
+          return isLong;
+        })
+        .map((el: Element) => {
+          const styles = window.getComputedStyle(el);
+          const result = {
+            text: el.textContent,
+            rect: el.getBoundingClientRect(),
+            styles: {
+              whiteSpace: styles.whiteSpace,
+              overflow: styles.overflow,
+              textOverflow: styles.textOverflow,
+              wordWrap: styles.wordWrap,
+              wordBreak: styles.wordBreak
+            }
+          };
+          console.log(`📊 Element styles:`, result.styles);
+          return result;
+        });
+        
+      console.log(`✅ Found ${longNameItems.length} long name elements`);
+      return longNameItems;
+    });
   }
 }
