@@ -37,7 +37,7 @@ jobs:
       # Install Obsidian for integration testing
       - name: Install Obsidian
         run: |
-          wget -O obsidian.deb https://github.com/obsidianmd/obsidian-releases/releases/download/v1.4.16/obsidian_1.4.16_amd64.deb
+          wget -O obsidian.deb https://github.com/obsidianmd/obsidian-releases/releases/download/v1.8.10/obsidian_1.8.10_amd64.deb
           sudo dpkg -i obsidian.deb || true
           sudo apt-get install -f -y
       
@@ -105,7 +105,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        obsidian-version: ['1.4.16', '1.5.0']
+        obsidian-version: ['1.7.7', '1.8.10']
     
     steps:
       - name: Checkout code
@@ -125,10 +125,10 @@ jobs:
       
       - name: Install Obsidian ${{ matrix.obsidian-version }}
         run: |
-          if [ "${{ matrix.obsidian-version }}" = "1.4.16" ]; then
-            wget -O obsidian.deb https://github.com/obsidianmd/obsidian-releases/releases/download/v1.4.16/obsidian_1.4.16_amd64.deb
+          if [ "${{ matrix.obsidian-version }}" = "1.7.7" ]; then
+            wget -O obsidian.deb https://github.com/obsidianmd/obsidian-releases/releases/download/v1.7.7/obsidian_1.7.7_amd64.deb
           else
-            wget -O obsidian.deb https://github.com/obsidianmd/obsidian-releases/releases/download/v1.5.0/obsidian_1.5.0_amd64.deb
+            wget -O obsidian.deb https://github.com/obsidianmd/obsidian-releases/releases/download/v1.8.10/obsidian_1.8.10_amd64.deb
           fi
           sudo dpkg -i obsidian.deb || true
           sudo apt-get install -f -y
