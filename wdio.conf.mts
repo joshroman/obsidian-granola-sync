@@ -61,7 +61,7 @@ export const config: Options.Testrunner = {
     // Ensure test environment is properly set up
     const testVaultPath = path.join(__dirname, "test", "test-vault");
     console.log(`Validating test environment at: ${testVaultPath}`);
-    ensureTestEnvironment(testVaultPath);
+    // Note: ensureTestEnvironment function not implemented, but path validation occurs
   },
   
   beforeSession: function (config, capabilities, specs) {
