@@ -172,3 +172,83 @@ export interface SyncState {
   syncedMeetingIds: string[];
   version: string;
 }
+
+// New API types for Granola API fix - July 4, 2025
+/**
+ * Information about a person in the user's network (exact API response structure)
+ */
+export interface PersonInfo {
+  id: string;
+  created_at: string;
+  user_id: string;
+  name: string;
+  job_title: string | null;
+  company_name?: string; // Optional - may not always be present
+  company_description: string;
+  links: Array<{ url: string; title: string }>;
+  email: string;
+  avatar?: string; // Optional - may not always be present
+  favorite_panel_templates?: Array<{ template_id: string }>; // Optional - may be empty or missing
+  user_type?: string; // Optional - may not always be present
+  subscription_name?: string; // Optional - may not always be present
+}
+
+/**
+ * Response containing information about people (returns array directly)
+ */
+export type PeopleResponse = PersonInfo[];
+
+/**
+ * Individual feature flag setting (exact API response structure)
+ */
+export interface FeatureFlag {
+  feature: string;
+  value: boolean | string | number | object;
+  user_id: string | null;
+}
+
+/**
+ * Response containing feature flag settings (returns array directly)
+ */
+export type FeatureFlagsResponse = FeatureFlag[];
+
+/**
+ * Response containing Notion integration details (exact API response structure)
+ */
+export interface NotionIntegrationResponse {
+  canIntegrate: boolean;
+  isConnected: boolean;
+  authUrl: string;
+  integrations: Record<string, {
+    workspace_name: string;
+    workspace_icon?: string; // Optional - may not always be present
+  }>;
+}
+
+/**
+ * Subscription plan details (exact API response structure)
+ */
+export interface SubscriptionPlan {
+  id: string;
+  type: string;
+  display_name: string;
+  price: {
+    monthly: number;
+  };
+  currency_iso: string;
+  requires_workspace: boolean;
+  requires_payment: boolean;
+  privacy_mode: string;
+  is_team_upsell_target: boolean;
+  features: string[];
+  display_order: number;
+  live: boolean;
+}
+
+/**
+ * Response containing subscription information (exact API response structure)
+ */
+export interface SubscriptionsResponse {
+  active_plan_id: string;
+  subscription_plans: SubscriptionPlan[];
+}

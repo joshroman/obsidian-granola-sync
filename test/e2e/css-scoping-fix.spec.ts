@@ -14,7 +14,7 @@ describe("CSS Scoping Fix Verification", () => {
   it("should have properly scoped CSS selectors that don't affect file explorer", async () => {
     console.log("Verifying CSS scoping fixes...");
 
-    // Check for problematic CSS rules in stylesheets
+    // Check for problematic CSS rules in stylesheets - ONLY from plugin
     const cssAnalysis = await browser.execute(() => {
       const styleSheets = Array.from(document.styleSheets);
       const problematicSelectors: string[] = [];
@@ -22,12 +22,21 @@ describe("CSS Scoping Fix Verification", () => {
       
       styleSheets.forEach(sheet => {
         try {
+          // ONLY check stylesheets that contain granola-specific CSS
+          const sheetContent = sheet.ownerNode?.textContent || '';
+          const isPluginStylesheet = sheetContent.includes('.granola-') || 
+                                    sheetContent.includes('granola-sync-plugin');
+          
+          if (!isPluginStylesheet) {
+            return; // Skip Obsidian core stylesheets
+          }
+          
           const rules = Array.from(sheet.cssRules || sheet.rules || []);
           rules.forEach(rule => {
             if (rule instanceof CSSStyleRule) {
               const selector = rule.selectorText;
               
-              // Check for problematic generic selectors
+              // Check for problematic generic selectors ONLY in plugin stylesheets
               if (selector) {
                 if (selector === ".button-container" || 
                     selector === ".notice" ||

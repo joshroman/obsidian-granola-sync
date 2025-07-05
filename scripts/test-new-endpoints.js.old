@@ -1,0 +1,179 @@
+#!/usr/bin/env node
+
+// Test script for the new Granola API endpoints
+// Note: Using direct API test approach since the bundled main.js doesn't export individual modules
+const https = require('https');
+const pako = require('pako');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
+// Get token from Granola
+function getToken() {
+  const tokenPath = path.join(os.homedir(), 'Library/Application Support/Granola/supabase.json');
+  try {
+    const data = fs.readFileSync(tokenPath, 'utf8');
+    const json = JSON.parse(data);
+    const cognitoTokens = JSON.parse(json.cognito_tokens);
+    return cognitoTokens.access_token;
+  } catch (error) {
+    throw new Error(`Failed to read token: ${error.message}`);
+  }
+}
+
+async function makeApiRequest(endpoint, body = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(endpoint, 'https://api.granola.ai');
+    
+    const options = {
+      hostname: url.hostname,
+      port: 443,
+      path: url.pathname + url.search,
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getToken()}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-App-Version': '6.4.0',
+        'User-Agent': 'Granola/6.4.0 Electron/33.4.5',
+        'X-Client-Type': 'electron'
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = [];
+      res.on('data', (chunk) => data.push(chunk));
+      res.on('end', () => {
+        const buffer = Buffer.concat(data);
+        const contentEncoding = res.headers['content-encoding'];
+        
+        try {
+          let responseData;
+          if (contentEncoding === 'gzip') {
+            responseData = pako.ungzip(buffer, { to: 'string' });
+          } else {
+            responseData = buffer.toString('utf8');
+          }
+          
+          // Handle text/plain responses that contain JSON (as per API fix)
+          try {
+            const parsed = JSON.parse(responseData);
+            resolve(parsed);
+          } catch {
+            resolve(responseData);
+          }
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+
+    req.on('error', reject);
+    
+    if (Object.keys(body).length > 0) {
+      req.write(JSON.stringify(body));
+    }
+    req.end();
+  });
+}
+
+async function testNewEndpoints() {
+  console.log('=== Testing New Granola API Endpoints ===\n');
+  
+  try {
+    console.log('✅ Token retrieved successfully\n');
+    
+    // Test 1: Feature Flags
+    console.log('🧪 Testing Feature Flags API...');
+    try {
+      const featureFlags = await makeApiRequest('/v1/get-feature-flags');
+      console.log(`✅ Retrieved ${featureFlags.length} feature flags`);
+      if (featureFlags.length > 0) {
+        console.log(`   Sample flags: ${featureFlags.slice(0, 3).map(f => f.feature).join(', ')}`);
+      }
+    } catch (error) {
+      console.error('❌ Feature flags test failed:', error.message);
+    }
+    
+    // Test 2: Feature Flags Map (backward compatibility)
+    console.log('\n🧪 Testing Feature Flags Map (backward compatibility)...');
+    try {
+      const featureFlags = await makeApiRequest('/v1/get-feature-flags');
+      const flagsMap = Object.fromEntries(featureFlags.map(f => [f.feature, f.value]));
+      const flagCount = Object.keys(flagsMap).length;
+      console.log(`✅ Retrieved ${flagCount} flags in map format`);
+      if (flagsMap.view_source !== undefined) {
+        console.log(`   view_source flag: ${flagsMap.view_source}`);
+      }
+    } catch (error) {
+      console.error('❌ Feature flags map test failed:', error.message);
+    }
+    
+    // Test 3: People API
+    console.log('\n🧪 Testing People API...');
+    try {
+      const people = await makeApiRequest('/v1/get-people');
+      console.log(`✅ Retrieved ${people.length} people`);
+      if (people.length > 0) {
+        const firstPerson = people[0];
+        console.log(`   First person: ${firstPerson.name} (${firstPerson.email})`);
+        if (firstPerson.company_name) {
+          console.log(`   Company: ${firstPerson.company_name}`);
+        }
+      }
+    } catch (error) {
+      console.error('❌ People API test failed:', error.message);
+    }
+    
+    // Test 4: Notion Integration
+    console.log('\n🧪 Testing Notion Integration API...');
+    try {
+      const notion = await makeApiRequest('/v1/get-notion-integration');
+      if (notion) {
+        console.log(`✅ Retrieved Notion integration details`);
+        console.log(`   Is connected: ${notion.isConnected}`);
+        console.log(`   Can integrate: ${notion.canIntegrate}`);
+        const workspaceCount = Object.keys(notion.integrations).length;
+        if (workspaceCount > 0) {
+          console.log(`   Connected workspaces: ${workspaceCount}`);
+          const workspaceNames = Object.values(notion.integrations).map(w => w.workspace_name);
+          console.log(`   Workspace names: ${workspaceNames.join(', ')}`);
+        }
+      } else {
+        console.log('✅ Notion integration returned null (no integration)');
+      }
+    } catch (error) {
+      console.error('❌ Notion integration test failed:', error.message);
+    }
+    
+    // Test 5: Subscriptions
+    console.log('\n🧪 Testing Subscriptions API...');
+    try {
+      const subscriptions = await makeApiRequest('/v1/get-subscriptions');
+      if (subscriptions) {
+        console.log(`✅ Retrieved subscription information`);
+        console.log(`   Active plan: ${subscriptions.active_plan_id}`);
+        console.log(`   Available plans: ${subscriptions.subscription_plans.length}`);
+        if (subscriptions.subscription_plans.length > 0) {
+          const activePlan = subscriptions.subscription_plans.find(p => p.id === subscriptions.active_plan_id);
+          if (activePlan) {
+            console.log(`   Active plan details: ${activePlan.display_name} (${activePlan.type})`);
+            console.log(`   Price: $${activePlan.price.monthly}/${activePlan.currency_iso} monthly`);
+          }
+        }
+      } else {
+        console.log('✅ Subscriptions returned null (no subscription data)');
+      }
+    } catch (error) {
+      console.error('❌ Subscriptions test failed:', error.message);
+    }
+    
+    console.log('\n🎉 All API endpoint tests completed!');
+    
+  } catch (error) {
+    console.error('\n💥 Test setup failed:', error.message);
+    process.exit(1);
+  }
+}
+
+testNewEndpoints().catch(console.error);

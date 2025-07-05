@@ -1,4 +1,4 @@
-import { Meeting, DocumentPanel, DocumentPanelsResponse, TranscriptSegment } from '../types';
+import { Meeting, DocumentPanel, DocumentPanelsResponse, TranscriptSegment, PeopleResponse, FeatureFlagsResponse, NotionIntegrationResponse, SubscriptionsResponse, FeatureFlag } from '../types';
 import { StructuredLogger } from '../utils/structured-logger';
 import { PerformanceMonitor } from '../utils/performance-monitor';
 import { ErrorTracker } from '../utils/error-tracker';
@@ -65,10 +65,9 @@ export class EnhancedGranolaService {
     const operationId = this.performanceMonitor.startOperation('test-connection');
     
     try {
-      console.log('[Granola Plugin Debug] Testing connection with config:', {
+      this.logger.debug('Testing connection', {
         baseUrl: this.config.baseUrl,
         hasApiKey: !!this.config.apiKey,
-        apiKeyLength: this.config.apiKey?.length,
         granolaVersion: this.config.granolaVersion
       });
       
@@ -79,13 +78,18 @@ export class EnhancedGranolaService {
         // Note: No body property at all - this will pass undefined for body
       });
       
-      console.log('[Granola Plugin Debug] Connection test response:', response);
+      this.logger.debug('Connection test successful', {
+        responseReceived: !!response,
+        responseType: typeof response
+      });
       
       this.performanceMonitor.endOperation(operationId, { success: true });
       // If we get here without throwing, the connection works
       return true;
     } catch (error) {
-      console.error('[Granola Plugin Debug] Test connection error:', error);
+      this.logger.warn('Connection test failed', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
       this.performanceMonitor.endOperation(operationId, { success: false });
       this.errorTracker.trackError(
         error instanceof Error ? error : new Error('Unknown error'),
@@ -104,7 +108,7 @@ export class EnhancedGranolaService {
         let cursor: string | undefined = undefined;
         let hasMore = true;
         
-        console.log('[Granola Plugin Debug] Starting getAllMeetings...');
+        this.logger.debug('Starting getAllMeetings operation');
         
         try {
           while (hasMore) {
@@ -114,7 +118,11 @@ export class EnhancedGranolaService {
             filters.cursor = cursor;
           }
           
-          console.log('[Granola Plugin Debug] Making request with filters:', filters);
+          this.logger.debug('Making documents request', {
+            hasFilters: !!filters,
+            limit: filters?.limit,
+            hasCursor: !!filters?.cursor
+          });
           
           // Use the correct Granola endpoint - documents not meetings
           const response = await this.makeRequest('/v2/get-documents', {
@@ -122,23 +130,25 @@ export class EnhancedGranolaService {
             body: filters  // Pass the filters object
           });
           
-          console.log('[Granola Plugin Debug] Documents response:', {
+          this.logger.debug('Documents response received', {
             hasData: !!response,
-            hasDocs: !!(response && response.docs),
             docsLength: response?.docs?.length || 0,
-            hasNextCursor: !!(response && response.next_cursor),
-            responseKeys: response ? Object.keys(response) : []
+            hasNextCursor: !!(response && response.next_cursor)
           });
           
           if (response && response.docs && Array.isArray(response.docs)) {
-            console.log('[Granola Plugin Debug] Processing', response.docs.length, 'documents');
+            this.logger.debug('Processing documents batch', {
+              documentCount: response.docs.length
+            });
             const transformedMeetings = await Promise.all(
               response.docs.map((m: any) => this.transformMeeting(m))
             );
             meetings.push(...transformedMeetings);
-            console.log('[Granola Plugin Debug] Total meetings so far:', meetings.length);
+            this.logger.debug('Progress update', {
+              totalMeetings: meetings.length
+            });
           } else {
-            console.log('[Granola Plugin Debug] No documents in response or invalid format');
+            this.logger.debug('No documents in response or invalid format');
           }
           
           // Update cursor for next page
@@ -152,10 +162,13 @@ export class EnhancedGranolaService {
           }
         }
         
-        console.log('[Granola Plugin Debug] Total meetings fetched:', meetings.length);
+        this.logger.info('Completed getAllMeetings operation', {
+          totalMeetings: meetings.length
+        });
         return meetings;
         } catch (error) {
-          console.error('[Granola Plugin Debug] Error in getAllMeetings:', error);
+          this.logger.error('Error in getAllMeetings operation', 
+            error instanceof Error ? error : new Error('Unknown error'));
           throw error;
         }
       },
@@ -218,7 +231,10 @@ export class EnhancedGranolaService {
           }
         }
         
-        console.log('[Granola Plugin Debug] Meetings since', since, ':', meetings.length);
+        this.logger.info('Completed getMeetingsSince operation', {
+          sinceDate: since,
+          meetingCount: meetings.length
+        });
         return meetings;
       },
       { type: 'incremental', since }
@@ -262,20 +278,20 @@ export class EnhancedGranolaService {
     
     if (response && response.docs && response.docs.length > 0) {
       const doc = response.docs[0];
-      console.log('[Granola Plugin Debug] Full document structure:', {
+      this.logger.debug('Document structure analysis', {
         type: doc.type,
-        chapters: doc.chapters,
-        people: doc.people,
-        notes_structure: doc.notes ? Object.keys(doc.notes) : 'no notes',
-        all_fields: Object.keys(doc)
+        hasChapters: !!doc.chapters,
+        hasPeople: !!doc.people,
+        hasNotes: !!doc.notes,
+        fieldCount: Object.keys(doc).length
       });
       
-      // Log detailed info about specific fields
+      // Log summary info about specific fields without exposing sensitive data
       if (doc.chapters) {
-        console.log('[Granola Plugin Debug] Chapters detail:', doc.chapters);
+        this.logger.debug('Chapters found', { chapterCount: doc.chapters.length || 0 });
       }
       if (doc.people) {
-        console.log('[Granola Plugin Debug] People detail:', doc.people);
+        this.logger.debug('People found', { peopleCount: doc.people.length || 0 });
       }
     }
   }
@@ -293,12 +309,11 @@ export class EnhancedGranolaService {
             body: { document_id: documentId }
           });
           
-          console.log('[Granola Plugin Debug] Panels response:', {
+          this.logger.debug('Panels response received', {
             hasData: !!response,
             responseType: typeof response,
             isArray: Array.isArray(response),
-            hasPanels: !!(response && response.panels),
-            panelsLength: response?.panels?.length || Array.isArray(response) ? response.length : 0
+            panelsLength: response?.panels?.length || (Array.isArray(response) ? response.length : 0)
           });
           
           // The API might return the panels array directly or wrapped in an object
@@ -350,7 +365,7 @@ export class EnhancedGranolaService {
             body: { document_id: documentId }
           });
           
-          console.log('[Granola Plugin Debug] Transcript response:', {
+          this.logger.debug('Transcript response received', {
             hasData: !!response,
             isArray: Array.isArray(response),
             segmentCount: Array.isArray(response) ? response.length : 0
@@ -376,6 +391,237 @@ export class EnhancedGranolaService {
         }
       },
       { documentId }
+    );
+  }
+
+  /**
+   * Retrieve people data from Granola API.
+   * @returns Array of people in the user's network
+   * @example
+   * ```ts
+   * const people = await service.getPeople();
+   * logger.info(`Found ${people.length} people`);
+   * for (const person of people) {
+   *   logger.info(`${person.name} (${person.email}) - ${person.company_name || 'No company'}`);
+   * }
+   * ```
+   */
+  async getPeople(): Promise<PeopleResponse> {
+    return this.performanceMonitor.measureAsync(
+      'fetch-people',
+      async () => {
+        try {
+          this.logger.debug('Fetching people data');
+          
+          const response = await this.makeRequest('/v1/get-people', {
+            method: 'POST'
+          });
+          
+          this.logger.debug('People response received', {
+            hasData: !!response,
+            isArray: Array.isArray(response),
+            peopleCount: Array.isArray(response) ? response.length : 0
+          });
+          
+          if (Array.isArray(response)) {
+            this.logger.info('Retrieved people data', { 
+              peopleCount: response.length
+            });
+            return response as PeopleResponse;
+          }
+          
+          return [];
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn('Failed to fetch people data', { 
+            error: errorMessage
+          });
+          this.errorTracker.trackError(
+            error instanceof Error ? error : new Error('Unknown error'),
+            'fetch-people'
+          );
+          // Return empty array on failure - graceful degradation
+          return [];
+        }
+      }
+    );
+  }
+
+  /**
+   * Retrieve feature flags for the user.
+   * @returns Array of feature flag settings
+   * @example
+   * ```ts
+   * const featureFlags = await service.getFeatureFlags();
+   * const newFeature = featureFlags.find(f => f.feature === 'newFeature');
+   * if (newFeature && newFeature.value) {
+   *   // Use new feature
+   * }
+   * ```
+   */
+  async getFeatureFlags(): Promise<FeatureFlagsResponse> {
+    return this.performanceMonitor.measureAsync(
+      'fetch-feature-flags',
+      async () => {
+        try {
+          this.logger.debug('Fetching feature flags');
+          
+          const response = await this.makeRequest('/v1/get-feature-flags', {
+            method: 'POST'
+          });
+          
+          this.logger.debug('Feature flags response received', {
+            hasData: !!response,
+            isArray: Array.isArray(response),
+            flagCount: Array.isArray(response) ? response.length : 0
+          });
+          
+          if (Array.isArray(response)) {
+            this.logger.info('Retrieved feature flags', { 
+              flagCount: response.length
+            });
+            return response as FeatureFlagsResponse;
+          }
+          
+          return [];
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn('Failed to fetch feature flags', { 
+            error: errorMessage
+          });
+          this.errorTracker.trackError(
+            error instanceof Error ? error : new Error('Unknown error'),
+            'fetch-feature-flags'
+          );
+          // Return empty array on failure - graceful degradation
+          return [];
+        }
+      }
+    );
+  }
+
+  /**
+   * Retrieve feature flags as a map (legacy format for backward compatibility).
+   * @returns Object with feature names as keys and values as flags
+   * @example
+   * ```ts
+   * const flagsMap = await service.getFeatureFlagsMap();
+   * if (flagsMap.newFeature) {
+   *   // Use new feature
+   * }
+   * ```
+   */
+  async getFeatureFlagsMap(): Promise<Record<string, boolean | string | number | object>> {
+    const flags = await this.getFeatureFlags();
+    return Object.fromEntries(flags.map(f => [f.feature, f.value]));
+  }
+
+  /**
+   * Retrieve Notion integration details.
+   * @returns Information about the user's Notion integration
+   * @example
+   * ```ts
+   * const notion = await service.getNotionIntegration();
+   * if (notion.isConnected) {
+   *   logger.info('Notion is connected');
+   *   logger.info('Workspaces:', Object.values(notion.integrations).map(i => i.workspace_name));
+   * }
+   * ```
+   */
+  async getNotionIntegration(): Promise<NotionIntegrationResponse | null> {
+    return this.performanceMonitor.measureAsync(
+      'fetch-notion-integration',
+      async () => {
+        try {
+          this.logger.debug('Fetching Notion integration details');
+          
+          const response = await this.makeRequest('/v1/get-notion-integration', {
+            method: 'POST'
+          });
+          
+          this.logger.debug('Notion integration response received', {
+            hasData: !!response,
+            isConnected: response?.isConnected,
+            canIntegrate: response?.canIntegrate,
+            integrationCount: response?.integrations ? Object.keys(response.integrations).length : 0
+          });
+          
+          if (response && typeof response === 'object') {
+            this.logger.info('Retrieved Notion integration details', { 
+              isConnected: response.isConnected,
+              canIntegrate: response.canIntegrate
+            });
+            return response as NotionIntegrationResponse;
+          }
+          
+          return null;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn('Failed to fetch Notion integration details', { 
+            error: errorMessage
+          });
+          this.errorTracker.trackError(
+            error instanceof Error ? error : new Error('Unknown error'),
+            'fetch-notion-integration'
+          );
+          // Return null on failure
+          return null;
+        }
+      }
+    );
+  }
+
+  /**
+   * Retrieve subscription information for the user.
+   * @returns Details about the user's subscription plans
+   * @example
+   * ```ts
+   * const subscriptions = await service.getSubscriptions();
+   * logger.info(`Active plan: ${subscriptions.active_plan_id}`);
+   * for (const plan of subscriptions.subscription_plans) {
+   *   logger.info(`Available plan: ${plan.display_name} (${plan.type}) - $${plan.price.monthly}/month`);
+   * }
+   * ```
+   */
+  async getSubscriptions(): Promise<SubscriptionsResponse | null> {
+    return this.performanceMonitor.measureAsync(
+      'fetch-subscriptions',
+      async () => {
+        try {
+          this.logger.debug('Fetching subscription information');
+          
+          const response = await this.makeRequest('/v1/get-subscriptions', {
+            method: 'POST'
+          });
+          
+          this.logger.debug('Subscriptions response received', {
+            hasData: !!response,
+            hasActivePlan: !!response?.active_plan_id,
+            planCount: response?.subscription_plans ? response.subscription_plans.length : 0
+          });
+          
+          if (response && typeof response === 'object' && response.active_plan_id) {
+            this.logger.info('Retrieved subscription information', { 
+              activePlanId: response.active_plan_id,
+              planCount: response.subscription_plans?.length || 0
+            });
+            return response as SubscriptionsResponse;
+          }
+          
+          return null;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn('Failed to fetch subscription information', { 
+            error: errorMessage
+          });
+          this.errorTracker.trackError(
+            error instanceof Error ? error : new Error('Unknown error'),
+            'fetch-subscriptions'
+          );
+          // Return null on failure
+          return null;
+        }
+      }
     );
   }
 
@@ -412,10 +658,12 @@ export class EnhancedGranolaService {
       ...this.config.headers
     };
     
-    console.log('[Granola Plugin Debug] EnhancedGranolaService making request to:', url);
-    console.log('[Granola Plugin Debug] Method:', method);
-    console.log('[Granola Plugin Debug] Body:', body);
-    console.log('[Granola Plugin Debug] Request headers:', headers);
+    this.logger.debug('Making API request', {
+      url: url.replace(/Bearer [^&]+/g, 'Bearer [REDACTED]'),
+      method,
+      hasBody: body !== undefined,
+      hasAuthHeader: !!headers.Authorization
+    });
     
     let lastError: Error | null = null;
     
@@ -436,19 +684,26 @@ export class EnhancedGranolaService {
           requestOptions.body = JSON.stringify(body);
         }
         
-        console.log('[Granola Plugin Debug] Sending request with Obsidian requestUrl');
+        this.logger.debug('Sending request with Obsidian requestUrl');
         
         let response;
         try {
           response = await requestUrl(requestOptions);
         } catch (requestError) {
-          console.error('[Granola Plugin Debug] requestUrl threw an error:', requestError);
-          console.error('[Granola Plugin Debug] Request options were:', requestOptions);
+          this.logger.error('RequestUrl threw an error',
+            requestError instanceof Error ? requestError : new Error('Unknown error'),
+            {
+              url: url.replace(/Bearer [^&]+/g, 'Bearer [REDACTED]'),
+              method
+            });
           throw requestError;
         }
         
-        console.log('[Granola Plugin Debug] Response status:', response.status);
-        console.log('[Granola Plugin Debug] Response headers:', response.headers);
+        this.logger.debug('Response received', {
+          status: response.status,
+          hasHeaders: !!response.headers,
+          contentType: response.headers?.['content-type']
+        });
         
         // Convert Obsidian's plain object headers to standard Headers instance
         const standardHeaders = new Headers(response.headers as Record<string, string>);
@@ -506,116 +761,33 @@ export class EnhancedGranolaService {
               }
             }
           } catch (parseError) {
-            console.error('[Granola Plugin Debug] Failed to parse error response:', parseError);
+            this.logger.warn('Failed to parse error response', {
+              error: parseError instanceof Error ? parseError.message : 'Unknown error'
+            });
           }
           
-          console.error('[Granola Plugin Debug] API error:', {
+          this.logger.warn('API error encountered', {
             status: response.status,
             message: errorMessage,
-            errorDetails: errorDetails,
-            url: url,
-            method: method,
-            body: body,
-            headers: response.headers
+            url: url.replace(/Bearer [^&]+/g, 'Bearer [REDACTED]'),
+            method
           });
           
           throw new Error(errorMessage);
         }
         
-        // Parse successful response
+        // Parse successful response using helper methods
         try {
-          // Check if response is gzipped
-          const contentEncoding = response.headers['content-encoding'] || response.headers['Content-Encoding'];
-          console.log('[Granola Plugin Debug] Content-Encoding:', contentEncoding);
-          
-          if (contentEncoding === 'gzip') {
-            // Response says it's gzipped, but Obsidian might have already decompressed it
-            console.log('[Granola Plugin Debug] Response has gzip encoding header');
-            
-            // First, try to parse response.json directly (Obsidian may have already decompressed)
-            if (response.json && typeof response.json === 'object') {
-              console.log('[Granola Plugin Debug] Obsidian already decompressed the response');
-              return response.json;
-            }
-            
-            // If not, try manual decompression
-            console.log('[Granola Plugin Debug] Attempting manual decompression...');
-            
-            // CRITICAL: Use arrayBuffer directly - do NOT touch response.text!
-            if (!response.arrayBuffer) {
-              throw new Error('No arrayBuffer available - Obsidian API might be outdated (requires 0.13.25+)');
-            }
-            
-            console.log('[Granola Plugin Debug] ArrayBuffer size:', response.arrayBuffer.byteLength);
-            
-            // Check if the data looks like it's already JSON (starts with { or [)
-            const uint8Array = new Uint8Array(response.arrayBuffer);
-            const firstChar = String.fromCharCode(uint8Array[0]);
-            
-            if (firstChar === '{' || firstChar === '[') {
-              console.log('[Granola Plugin Debug] Data appears to be already decompressed JSON');
-              const textDecoder = new TextDecoder();
-              const jsonString = textDecoder.decode(uint8Array);
-              return JSON.parse(jsonString);
-            }
-            
-            // Try gzip decompression
-            try {
-              const decompressed = pako.ungzip(uint8Array, { to: 'string' });
-              console.log('[Granola Plugin Debug] Manual decompression successful, length:', decompressed.length);
-              
-              // Log first 500 chars to see what we got
-              console.log('[Granola Plugin Debug] Decompressed content preview:', decompressed.substring(0, 500));
-              
-              // Check if it's HTML
-              if (decompressed.trim().startsWith('<!DOCTYPE') || decompressed.trim().startsWith('<html')) {
-                console.error('[Granola Plugin Debug] Response is HTML, not JSON!');
-                throw new Error('API returned HTML instead of JSON - possible authentication or endpoint issue');
-              }
-              
-              // Parse the decompressed JSON
-              const jsonData = JSON.parse(decompressed);
-              console.log('[Granola Plugin Debug] Successfully parsed JSON data');
-              return jsonData;
-            } catch (decompressError) {
-              console.error('[Granola Plugin Debug] Manual decompression failed:', decompressError);
-              
-              // Last resort: try to decode as plain text
-              try {
-                const textDecoder = new TextDecoder();
-                const text = textDecoder.decode(uint8Array);
-                console.log('[Granola Plugin Debug] Trying plain text decode, preview:', text.substring(0, 200));
-                return JSON.parse(text);
-              } catch (textError) {
-                console.error('[Granola Plugin Debug] Plain text decode also failed:', textError);
-                throw new Error(`Failed to process response: ${decompressError instanceof Error ? decompressError.message : String(decompressError)}`);
-              }
-            }
-          }
-          
-          // Not gzipped - use normal parsing
-          if (response.json) {
-            console.log('[Granola Plugin Debug] Using response.json (not gzipped)');
-            // Check if response.json is actually JSON or if it's HTML
-            if (typeof response.json === 'object' && response.json !== null) {
-              return response.json;
-            } else {
-              console.error('[Granola Plugin Debug] response.json is not an object:', typeof response.json);
-              console.error('[Granola Plugin Debug] response.json value:', response.json);
-              throw new Error('Response is not valid JSON');
-            }
-          } else {
-            throw new Error('No valid response data available');
-          }
+          return await this.parseApiResponse(response);
         } catch (e) {
-          console.error('[Granola Plugin Debug] Failed to parse response:', e);
-          console.error('[Granola Plugin Debug] Response object:', {
-            hasJson: !!response.json,
-            hasText: !!response.text,
-            hasArrayBuffer: !!response.arrayBuffer,
-            status: response.status,
-            headers: response.headers
-          });
+          this.logger.error('Failed to parse response',
+            e instanceof Error ? e : new Error('Unknown error'),
+            {
+              hasJson: !!response.json,
+              hasText: !!response.text,
+              hasArrayBuffer: !!response.arrayBuffer,
+              status: response.status
+            });
           throw new Error('Invalid response from API');
         }
         
@@ -756,21 +928,202 @@ export class EnhancedGranolaService {
     this.isProcessingQueue = false;
   }
 
+  /**
+   * Parse API response handling various content encodings and formats
+   */
+  private async parseApiResponse(response: any): Promise<any> {
+    const contentEncoding = response.headers['content-encoding'] || response.headers['Content-Encoding'];
+    
+    this.logger.debug('Processing response', {
+      contentEncoding: contentEncoding || 'none'
+    });
+    
+    if (contentEncoding === 'gzip') {
+      return this.parseGzippedResponse(response);
+    }
+    
+    return this.parseUncompressedResponse(response);
+  }
+
+  /**
+   * Handle gzipped response parsing with fallback strategies
+   */
+  private parseGzippedResponse(response: any): any {
+    this.logger.debug('Response has gzip encoding header');
+    
+    // First, try to parse response.json directly (Obsidian may have already decompressed)
+    if (response.json && typeof response.json === 'object') {
+      this.logger.debug('Obsidian already decompressed the response');
+      return response.json;
+    }
+    
+    // If not, try manual decompression
+    return this.manuallyDecompressResponse(response);
+  }
+
+  /**
+   * Manually decompress gzipped response data
+   */
+  private manuallyDecompressResponse(response: any): any {
+    this.logger.debug('Attempting manual decompression');
+    
+    if (!response.arrayBuffer) {
+      throw new Error('No arrayBuffer available - Obsidian API might be outdated (requires 0.13.25+)');
+    }
+    
+    this.logger.debug('Processing response buffer', {
+      bufferSize: response.arrayBuffer.byteLength
+    });
+    
+    const uint8Array = new Uint8Array(response.arrayBuffer);
+    
+    // Check if data is already decompressed JSON
+    if (this.isAlreadyDecompressed(uint8Array)) {
+      return this.parseDecompressedBuffer(uint8Array);
+    }
+    
+    // Try gzip decompression
+    return this.attemptGzipDecompression(uint8Array);
+  }
+
+  /**
+   * Check if buffer data appears to already be decompressed JSON
+   */
+  private isAlreadyDecompressed(uint8Array: Uint8Array): boolean {
+    const firstChar = String.fromCharCode(uint8Array[0]);
+    return firstChar === '{' || firstChar === '[';
+  }
+
+  /**
+   * Parse buffer that's already decompressed JSON
+   */
+  private parseDecompressedBuffer(uint8Array: Uint8Array): any {
+    this.logger.debug('Data appears to be already decompressed JSON');
+    const textDecoder = new TextDecoder();
+    const jsonString = textDecoder.decode(uint8Array);
+    return JSON.parse(jsonString);
+  }
+
+  /**
+   * Attempt gzip decompression with fallback to plain text
+   */
+  private attemptGzipDecompression(uint8Array: Uint8Array): any {
+    try {
+      const decompressed = pako.ungzip(uint8Array, { to: 'string' });
+      
+      this.logger.debug('Manual decompression successful', {
+        decompressedLength: decompressed.length
+      });
+      
+      this.validateDecompressedContent(decompressed);
+      
+      const jsonData = JSON.parse(decompressed);
+      this.logger.debug('Successfully parsed JSON data');
+      return jsonData;
+    } catch (decompressError) {
+      this.logger.warn('Manual decompression failed', {
+        error: decompressError instanceof Error ? decompressError.message : 'Unknown error'
+      });
+      
+      return this.fallbackToPlainText(uint8Array, decompressError);
+    }
+  }
+
+  /**
+   * Validate that decompressed content is not HTML
+   */
+  private validateDecompressedContent(decompressed: string): void {
+    const trimmed = decompressed.trim();
+    const isHtml = trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html');
+    
+    this.logger.debug('Decompressed content analysis', {
+      contentLength: decompressed.length,
+      isHtml
+    });
+    
+    if (isHtml) {
+      this.logger.error('Response is HTML, not JSON - possible authentication or endpoint issue');
+      throw new Error('API returned HTML instead of JSON - possible authentication or endpoint issue');
+    }
+  }
+
+  /**
+   * Fallback to plain text decoding when gzip fails
+   */
+  private fallbackToPlainText(uint8Array: Uint8Array, originalError: any): any {
+    try {
+      const textDecoder = new TextDecoder();
+      const text = textDecoder.decode(uint8Array);
+      
+      this.logger.debug('Trying plain text decode fallback', {
+        textLength: text.length
+      });
+      
+      return JSON.parse(text);
+    } catch (textError) {
+      this.logger.error('Plain text decode also failed',
+        textError instanceof Error ? textError : new Error('Unknown error'));
+      
+      const errorMessage = originalError instanceof Error ? originalError.message : String(originalError);
+      throw new Error(`Failed to process response: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Parse uncompressed response (normal JSON or text/plain)
+   */
+  private parseUncompressedResponse(response: any): any {
+    if (response.json) {
+      this.logger.debug('Using response.json (not gzipped)');
+      
+      if (typeof response.json === 'object' && response.json !== null) {
+        return response.json;
+      } else {
+        this.logger.error('response.json is not an object', undefined, {
+          responseType: typeof response.json
+        });
+        throw new Error('Response is not valid JSON');
+      }
+    }
+    
+    if (response.text) {
+      return this.parseTextResponse(response.text);
+    }
+    
+    throw new Error('No valid response data available');
+  }
+
+  /**
+   * Parse text/plain response that contains JSON (Granola API fix)
+   */
+  private parseTextResponse(text: string): any {
+    this.logger.debug('Attempting to parse text response as JSON');
+    
+    try {
+      const parsedJson = JSON.parse(text);
+      this.logger.debug('Successfully parsed text as JSON');
+      return parsedJson;
+    } catch (parseError) {
+      this.logger.error('Failed to parse text as JSON',
+        parseError instanceof Error ? parseError : new Error('Unknown error'));
+      
+      const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+      throw new Error(`Invalid JSON in text response: ${errorMessage}`);
+    }
+  }
 
   private transformMeeting(data: any, panels?: DocumentPanel[]): Meeting {
     // Log only for the first few meetings to understand the data structure
     if (!this.loggedMeetingData) {
       this.loggedMeetingData = true;
-      console.log('[Granola Plugin Debug] Sample document data:', {
+      this.logger.debug('Sample document structure analysis', {
         id: data.id,
-        title: data.title,
-        workspace_id: data.workspace_id,
-        workspace_name: data.workspace_name,
-        folder: data.folder,
+        hasTitle: !!data.title,
+        hasWorkspace: !!(data.workspace_id || data.workspace_name),
         type: data.type,
-        chapters: data.chapters,
-        people: data.people,
-        available_fields: Object.keys(data).slice(0, 20) // First 20 fields
+        hasChapters: !!data.chapters,
+        hasPeople: !!data.people,
+        fieldCount: Object.keys(data).length
       });
     }
     
@@ -794,7 +1147,9 @@ export class EnhancedGranolaService {
       granolaFolder: (() => {
         const folder = data.workspace_id || data.workspace_name || data.workspace || data.folder || '';
         if (!folder && this.loggedMeetingData) {
-          console.log('[Granola Plugin Debug] No workspace/folder data found. Available fields:', Object.keys(data));
+          this.logger.debug('No workspace/folder data found', {
+            fieldCount: Object.keys(data).length
+          });
         }
         return folder ? this.formatWorkspaceName(folder) : '';
       })(),

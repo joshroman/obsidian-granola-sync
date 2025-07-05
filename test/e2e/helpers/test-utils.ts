@@ -74,8 +74,8 @@ export class TestUtils {
         }
       });
     });
-    // Wait a bit for modals to close
-    await browser.pause(500);
+    // Wait longer for modals to close completely
+    await browser.pause(1000);
   }
 
   /**
@@ -108,8 +108,8 @@ export class TestUtils {
       plugin.performSync(force).then(done);
     }, forceAll);
     
-    // Additional wait to ensure file operations complete
-    await browser.pause(1000);
+    // Additional wait to ensure file operations complete fully
+    await browser.pause(2000);
     return result;
   }
 
@@ -176,8 +176,8 @@ export class TestUtils {
         });
       }
     });
-    // Wait for file explorer to render
-    await browser.pause(1000);
+    // Wait longer for file explorer to render completely
+    await browser.pause(1500);
   }
 
   /**
@@ -260,6 +260,229 @@ export class TestUtils {
       const match = progressText.match(/Step (\d+)/);
       return match ? parseInt(match[1]) : 0;
     });
+  }
+
+  /**
+   * Test real settings UI interaction with proper error handling
+   */
+  static async testSettingsUIInteraction(): Promise<boolean> {
+    console.log("🔧 Testing real settings UI interaction...");
+    
+    try {
+      // Method 1: Try real Obsidian Settings API with proper waiting
+      const settingsAPIReady = await browser.waitUntil(async () => {
+        return await browser.execute(() => {
+          // @ts-ignore
+          const app = window.app;
+          return app && app.setting && 
+                 typeof app.setting.open === 'function' &&
+                 typeof app.setting.openTab === 'function' &&
+                 typeof app.setting.close === 'function';
+        });
+      }, { 
+        timeout: 5000,
+        timeoutMsg: 'Settings API not ready within 5 seconds'
+      }).catch(() => false);
+
+      if (settingsAPIReady) {
+        console.log("✅ Settings API ready, testing real API calls...");
+        
+        await browser.execute(() => {
+          try {
+            // @ts-ignore
+            const app = window.app;
+            app.setting.open();
+            app.setting.openTab("obsidian-granola-sync");
+          } catch (error) {
+            console.warn('Settings API call failed:', error);
+            throw error;
+          }
+        });
+
+        await browser.pause(1000);
+        await browser.saveScreenshot(`./test-screenshots/integration-verify-settings.png`);
+
+        // Close settings
+        await browser.execute(() => {
+          try {
+            // @ts-ignore
+            const app = window.app;
+            app.setting.close();
+          } catch (error) {
+            console.warn('Settings close failed:', error);
+          }
+        });
+        
+        console.log("✅ Real settings API interaction successful");
+        return true;
+      } else {
+        console.log("⚠️  Settings API not ready, trying UI interaction fallback...");
+        return await TestUtils.testUIClickInteraction();
+      }
+    } catch (error) {
+      console.log(`⚠️  Settings API failed (${error}), trying UI interaction fallback...`);
+      return await TestUtils.testUIClickInteraction();
+    }
+  }
+
+  /**
+   * Test UI interaction by clicking actual elements
+   */
+  static async testUIClickInteraction(): Promise<boolean> {
+    console.log("🖱️  Testing UI click interactions...");
+    
+    try {
+      // Method 2: Use real UI interactions - click settings gear
+      const settingsButtonExists = await browser.execute(() => {
+        // Look for settings button in various locations
+        const selectors = [
+          '.side-dock-ribbon-tab[aria-label*="Settings"]',
+          '.side-dock-ribbon-tab[aria-label*="settings"]', 
+          '.workspace-ribbon-collapse-btn',
+          '[data-type="settings"]',
+          '.clickable-icon[aria-label*="Settings"]'
+        ];
+        
+        for (const selector of selectors) {
+          const element = document.querySelector(selector);
+          if (element) {
+            console.log(`Found settings button with selector: ${selector}`);
+            return { found: true, selector };
+          }
+        }
+        
+        return { found: false, selector: null };
+      });
+
+      if (settingsButtonExists.found) {
+        console.log(`✅ Settings button found: ${settingsButtonExists.selector}`);
+        
+        // Click the settings button
+        await browser.execute((selector) => {
+          const settingsBtn = document.querySelector(selector);
+          if (settingsBtn && settingsBtn instanceof HTMLElement) {
+            settingsBtn.click();
+            console.log('Settings button clicked');
+          }
+        }, settingsButtonExists.selector);
+
+        // Wait for settings modal to appear
+        const settingsModalAppeared = await browser.waitUntil(async () => {
+          return await browser.execute(() => {
+            const modals = document.querySelectorAll('.modal-container, .setting-tab, .settings-modal');
+            return modals.length > 0;
+          });
+        }, { 
+          timeout: 3000,
+          timeoutMsg: 'Settings modal did not appear'
+        }).catch(() => false);
+
+        if (settingsModalAppeared) {
+          console.log("✅ Settings modal appeared");
+          
+          // Look for plugin tab
+          const pluginTabFound = await browser.execute(() => {
+            const selectors = [
+              '*[data-tab="obsidian-granola-sync"]',
+              '.setting-tab*=granola',
+              '.setting-tab*=Granola',
+              '.nav-item*=granola'
+            ];
+            
+            for (const selector of selectors) {
+              try {
+                const tab = document.querySelector(selector);
+                if (tab) {
+                  console.log(`Found plugin tab: ${selector}`);
+                  if (tab instanceof HTMLElement) {
+                    tab.click();
+                  }
+                  return true;
+                }
+              } catch (e) {
+                // Continue to next selector
+              }
+            }
+            return false;
+          });
+
+          await browser.pause(1000);
+          await browser.saveScreenshot(`./test-screenshots/integration-verify-ui-interaction.png`);
+
+          // Close modal
+          await browser.execute(() => {
+            const closeButtons = document.querySelectorAll('.modal-close-button, .modal-bg, .setting-close');
+            closeButtons.forEach(btn => {
+              if (btn instanceof HTMLElement) {
+                btn.click();
+              }
+            });
+          });
+          
+          console.log(`✅ UI interaction successful. Plugin tab found: ${pluginTabFound}`);
+          return true;
+        }
+      }
+      
+      console.log("⚠️  UI interaction fallback could not find settings elements");
+      return false;
+    } catch (error) {
+      console.log(`❌ UI interaction failed: ${error}`);
+      return false;
+    }
+  }
+
+  /**
+   * Test plugin through command palette interaction
+   */
+  static async testCommandPaletteInteraction(): Promise<boolean> {
+    console.log("⌨️  Testing command palette interaction...");
+    
+    try {
+      // Open command palette (Ctrl+P / Cmd+P)
+      await browser.keys(['Control', 'p']);
+      await browser.pause(500);
+      
+      // Wait for command palette to appear
+      const paletteAppeared = await browser.waitUntil(async () => {
+        return await browser.execute(() => {
+          return document.querySelector('.prompt-input, .suggestion-container') !== null;
+        });
+      }, { 
+        timeout: 2000,
+        timeoutMsg: 'Command palette did not appear'
+      }).catch(() => false);
+
+      if (paletteAppeared) {
+        // Type plugin command
+        await browser.keys('Granola');
+        await browser.pause(500);
+        
+        // Look for granola commands
+        const granolaCommands = await browser.execute(() => {
+          const suggestions = document.querySelectorAll('.suggestion-item, .prompt-instruction');
+          const granolaItems = Array.from(suggestions).filter(item => 
+            item.textContent?.toLowerCase().includes('granola')
+          );
+          return granolaItems.length;
+        });
+        
+        console.log(`✅ Found ${granolaCommands} Granola commands in palette`);
+        
+        // Close command palette
+        await browser.keys('Escape');
+        
+        await browser.saveScreenshot(`./test-screenshots/integration-verify-command-palette.png`);
+        return granolaCommands > 0;
+      }
+      
+      return false;
+    } catch (error) {
+      console.log(`❌ Command palette interaction failed: ${error}`);
+      // Close palette if still open
+      await browser.keys('Escape').catch(() => {});
+      return false;
+    }
   }
 
   /**
