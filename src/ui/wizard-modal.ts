@@ -181,7 +181,7 @@ export class SetupWizard extends Modal {
 
   private addNavigationButtons() {
     const buttonContainer = this.contentEl.createEl('div', {
-      cls: 'modal-button-container'
+      cls: 'granola-button-container'
     });
 
     // Back button
@@ -196,7 +196,7 @@ export class SetupWizard extends Modal {
     }
 
     // Spacer
-    buttonContainer.createEl('div', { cls: 'modal-button-spacer' });
+    buttonContainer.createEl('div', { cls: 'granola-button-spacer' });
 
     // Next/Complete button
     const nextButton = buttonContainer.createEl('button', {

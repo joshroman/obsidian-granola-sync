@@ -169,4 +169,98 @@ describe("CSS Scoping Fix Verification", () => {
     // File explorer should not have any button-container elements affected by our CSS
     expect(fileExplorerCheck.buttonContainersInFileExplorer).toBe(0);
   });
+
+  it("should not affect File Explorer layout with realistic content", async () => {
+    console.log("🔍 Testing File Explorer layout with realistic content...");
+    
+    // Create comprehensive test vault structure
+    await TestUtils.createTestVaultStructure();
+    
+    // Ensure File Explorer is ready
+    await TestUtils.ensureFileExplorerReady();
+    
+    // Test CSS analysis (existing validation)
+    const cssAnalysis = await browser.execute(() => {
+      const styleSheets = Array.from(document.styleSheets);
+      let granolaStylesFound = false;
+      let granolaRulesCount = 0;
+      let specificSelectors: string[] = [];
+      
+      for (const sheet of styleSheets) {
+        try {
+          // Check if this stylesheet contains plugin CSS
+          if (sheet.ownerNode?.textContent?.includes('.granola-')) {
+            granolaStylesFound = true;
+          }
+          
+          const rules = Array.from(sheet.cssRules || sheet.rules || []);
+          for (const rule of rules) {
+            if (rule instanceof CSSStyleRule) {
+              if (rule.selectorText?.includes('.granola-') || rule.cssText?.includes('.granola-')) {
+                granolaStylesFound = true;
+                granolaRulesCount++;
+                specificSelectors.push(rule.selectorText || 'unknown');
+              }
+            }
+          }
+        } catch (e) {
+          // Some stylesheets might not be accessible
+        }
+      }
+      
+      return {
+        stylesFound: granolaStylesFound,
+        rulesCount: granolaRulesCount,
+        sampleSelectors: specificSelectors.slice(0, 5),
+        totalStyleSheets: styleSheets.length
+      };
+    });
+    
+    console.log('CSS Integration Check:', cssAnalysis);
+    
+    // Verify plugin CSS is loaded
+    expect(cssAnalysis.stylesFound).toBe(true);
+    expect(cssAnalysis.rulesCount).toBeGreaterThan(0);
+    
+    // NEW: Test File Explorer layout at multiple widths
+    console.log("📐 Testing File Explorer layout at multiple widths...");
+    
+    const layoutResults = await TestUtils.testFileExplorerAtWidths([
+      "300px", "250px", "200px", "150px"
+    ]);
+    
+    console.log("📊 Layout Results:");
+    layoutResults.forEach((result, index) => {
+      console.log(`  Width ${result.width}: ${result.layout.totalItems} items, ${result.wrappedItems} wrapped, visible: ${result.allItemsVisible}`);
+    });
+    
+    // Verify minimal wrapping at any width (File Explorer may have some elements)
+    layoutResults.forEach((result, index) => {
+      expect(result.wrappedItems).toBeLessThanOrEqual(2);
+      expect(result.allItemsVisible).toBe(true);
+      expect(result.layout.totalItems).toBeGreaterThan(0);
+    });
+    
+    // Test long filename handling
+    console.log("📝 Testing long filename handling...");
+    const longNameItems = await TestUtils.getLongNameElements();
+    
+    console.log(`Found ${longNameItems.length} items with long names`);
+    expect(longNameItems.length).toBeGreaterThan(0);
+    
+    // Verify long names are handled properly
+    longNameItems.forEach((item, index) => {
+      console.log(`  Item ${index + 1}: "${item.text}" - whiteSpace: ${item.styles.whiteSpace}`);
+      // Either non-normal white-space OR proper overflow handling
+      const hasProperOverflow = ['hidden', 'ellipsis', 'auto', 'scroll'].includes(item.styles.overflow) ||
+                               ['ellipsis', 'clip'].includes(item.styles.textOverflow);
+      const hasAppropriateTextHandling = item.styles.whiteSpace !== 'normal' || hasProperOverflow;
+      expect(hasAppropriateTextHandling).toBe(true);
+    });
+    
+    // Take comprehensive screenshot evidence
+    await browser.saveScreenshot('./test-screenshots/file-explorer-layout-validation.png');
+    
+    console.log("✅ File Explorer layout validation completed successfully");
+  });
 });

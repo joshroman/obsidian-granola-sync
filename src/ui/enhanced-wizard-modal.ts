@@ -154,27 +154,27 @@ export class EnhancedSetupWizard extends Modal {
     const step = this.steps[this.currentStep];
     
     // Header
-    const header = contentEl.createDiv('wizard-header');
+    const header = contentEl.createDiv('granola-wizard-header');
     header.createEl('h2', { text: step.title });
     
     // Progress indicator
-    const progress = header.createDiv('wizard-progress');
-    const progressBar = progress.createDiv('progress-bar');
-    const progressFill = progressBar.createDiv('progress-fill');
+    const progress = header.createDiv('granola-wizard-progress');
+    const progressBar = progress.createDiv('granola-progress-bar');
+    const progressFill = progressBar.createDiv('granola-progress-fill');
     progressFill.style.width = `${((this.currentStep + 1) / this.steps.length) * 100}%`;
     
-    const progressText = progress.createDiv('progress-text');
+    const progressText = progress.createDiv('granola-progress-text');
     progressText.setText(`Step ${this.currentStep + 1} of ${this.steps.length}`);
     
     // Content
-    const content = contentEl.createDiv('wizard-content');
-    content.createEl('p', { text: step.description, cls: 'wizard-description' });
+    const content = contentEl.createDiv('granola-wizard-content');
+    content.createEl('p', { text: step.description, cls: 'granola-wizard-description' });
     
     // Render step-specific content
     this.renderStepContent(step, content);
     
     // Footer with navigation
-    const footer = contentEl.createDiv('wizard-footer');
+    const footer = contentEl.createDiv('granola-wizard-footer');
     
     // Back button
     if (this.currentStep > 0) {
@@ -243,7 +243,7 @@ export class EnhancedSetupWizard extends Modal {
   }
 
   private renderWelcomeStep(container: HTMLElement): void {
-    const features = container.createDiv('wizard-features');
+    const features = container.createDiv('granola-wizard-features');
     
     const featureList = [
       { icon: '🔄', title: 'Automatic Sync', desc: 'Keep your meeting notes up to date' },
@@ -253,9 +253,9 @@ export class EnhancedSetupWizard extends Modal {
     ];
     
     featureList.forEach(feature => {
-      const featureEl = features.createDiv('feature-item');
-      featureEl.createSpan({ text: feature.icon, cls: 'feature-icon' });
-      const textEl = featureEl.createDiv('feature-text');
+      const featureEl = features.createDiv('granola-feature-item');
+      featureEl.createSpan({ text: feature.icon, cls: 'granola-feature-icon' });
+      const textEl = featureEl.createDiv('granola-feature-text');
       textEl.createEl('h4', { text: feature.title });
       textEl.createEl('p', { text: feature.desc });
     });
@@ -386,7 +386,7 @@ export class EnhancedSetupWizard extends Modal {
     helpList.createEl('li', { text: 'Granola is running' });
     
     // Only retry button - no manual option
-    const buttonDiv = errorDiv.createDiv('button-container');
+    const buttonDiv = errorDiv.createDiv('granola-button-container');
     
     const retryButton = buttonDiv.createEl('button', {
       text: 'Try Again',
@@ -400,15 +400,15 @@ export class EnhancedSetupWizard extends Modal {
 
   private async updateConnectionStatus(container: HTMLElement): Promise<void> {
     container.empty();
-    container.createSpan({ text: 'Testing connection...', cls: 'status-testing' });
+    container.createSpan({ text: 'Testing connection...', cls: 'granola-status-testing' });
     
     const validation = await this.steps[1].validate!();
     container.empty();
     
     if (validation.valid) {
-      container.createSpan({ text: '✓ Connected successfully', cls: 'status-success' });
+      container.createSpan({ text: '✓ Connected successfully', cls: 'granola-status-success' });
     } else {
-      container.createSpan({ text: `✗ ${validation.error}`, cls: 'status-error' });
+      container.createSpan({ text: `✗ ${validation.error}`, cls: 'granola-status-error' });
     }
   }
 
@@ -1039,7 +1039,7 @@ export class EnhancedSetupWizard extends Modal {
 
   private updateNavigationButtons(): void {
     // Don't re-render the entire modal, just update the button states
-    const footer = this.contentEl.querySelector('.wizard-footer');
+    const footer = this.contentEl.querySelector('.granola-wizard-footer');
     if (!footer) return;
     
     const nextButton = footer.querySelector('.mod-cta') as HTMLButtonElement;

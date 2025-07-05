@@ -85,7 +85,7 @@ export class ConflictResolutionModal extends Modal {
     this.renderConflictList(conflictList);
 
     // Action buttons
-    const buttonContainer = contentEl.createDiv('button-container');
+    const buttonContainer = contentEl.createDiv('granola-button-container');
     
     const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
     cancelButton.addEventListener('click', () => this.close());
