@@ -662,12 +662,12 @@ export class EnhancedSetupWizard extends Modal {
       .setName('')
       .setDesc('');
     
-    const toggleContainer = toggleSetting.controlEl.createDiv('button-toggle-group-inline');
+    const toggleContainer = toggleSetting.controlEl.createDiv('granola-button-toggle-group-inline');
     
     // Option 1: One template per meeting
     const singleBtn = toggleContainer.createEl('button', {
       text: 'Only Sync One Template Per Meeting',
-      cls: 'button-toggle'
+      cls: 'granola-button-toggle'
     });
     if (this.templateSyncMode === 'single') {
       singleBtn.addClass('active');
@@ -689,7 +689,7 @@ export class EnhancedSetupWizard extends Modal {
     // Option 2: All templates
     const allBtn = toggleContainer.createEl('button', {
       text: 'Sync All Templates Applied to a Meeting',
-      cls: 'button-toggle'
+      cls: 'granola-button-toggle'
     });
     if (this.templateSyncMode === 'all') {
       allBtn.addClass('active');
@@ -803,12 +803,12 @@ export class EnhancedSetupWizard extends Modal {
       .setName('')
       .setDesc('');
     
-    const toggleContainer = toggleSetting.controlEl.createDiv('button-toggle-group');
+    const toggleContainer = toggleSetting.controlEl.createDiv('granola-button-toggle-group-inline');
     
     // Manual sync button
     const manualBtn = toggleContainer.createEl('button', {
       text: 'Manual',
-      cls: 'button-toggle'
+      cls: 'granola-button-toggle'
     });
     if (this.syncMode === 'manual') {
       manualBtn.addClass('active');
@@ -830,7 +830,7 @@ export class EnhancedSetupWizard extends Modal {
     // Automatic sync button
     const autoBtn = toggleContainer.createEl('button', {
       text: 'Automatic',
-      cls: 'button-toggle'
+      cls: 'granola-button-toggle'
     });
     if (this.syncMode === 'automatic') {
       autoBtn.addClass('active');

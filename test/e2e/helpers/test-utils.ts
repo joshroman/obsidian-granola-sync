@@ -286,6 +286,44 @@ export class TestUtils {
   }
 
   /**
+   * Navigate to a specific wizard step
+   */
+  static async navigateToWizardStep(targetStep: number): Promise<void> {
+    console.log(`🧭 Navigating to wizard step ${targetStep}...`);
+    
+    // Open wizard
+    await browser.execute(() => {
+      // @ts-ignore
+      const plugin = window.app.plugins.plugins["obsidian-granola-sync"];
+      plugin.showSetupWizard();
+    });
+
+    await browser.pause(500);
+
+    // Navigate to target step (0-indexed, but displayed as 1-indexed)
+    const stepsToClick = targetStep - 1; // Convert to 0-indexed
+    
+    for (let i = 0; i < stepsToClick; i++) {
+      const currentStep = await TestUtils.getCurrentWizardStep();
+      console.log(`  Currently on step ${currentStep}, clicking Next...`);
+      
+      await browser.execute(() => {
+        const nextButton = Array.from(document.querySelectorAll("button"))
+          .find(btn => btn.textContent === "Next");
+        if (nextButton) {
+          nextButton.click();
+        } else {
+          console.error('Next button not found');
+        }
+      });
+      await browser.pause(500);
+    }
+    
+    const finalStep = await TestUtils.getCurrentWizardStep();
+    console.log(`✅ Reached step ${finalStep} (target was ${targetStep})`);
+  }
+
+  /**
    * Test real settings UI interaction with proper error handling
    */
   static async testSettingsUIInteraction(): Promise<boolean> {
