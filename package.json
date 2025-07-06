@@ -1,6 +1,6 @@
 {
   "name": "obsidian-granola-sync",
-  "version": "0.4.3-beta",
+  "version": "0.5.0-beta",
   "description": "Sync your Granola meeting notes to Obsidian",
   "main": "main.js",
   "repository": {
