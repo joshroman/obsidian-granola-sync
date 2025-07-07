@@ -47,3 +47,6 @@ test-panels*.js
 # Build artifacts
 obsidian-granola-sync-plugin/
 *.zip
+# Test screenshots - these vary between environments
+test-screenshots/
+*.png
