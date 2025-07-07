@@ -48,5 +48,5 @@ test-panels*.js
 obsidian-granola-sync-plugin/
 *.zip
 # Test screenshots - these vary between environments
-test-screenshots/
-*.png
+test-screenshots/*
+!test-screenshots/.gitkeep
